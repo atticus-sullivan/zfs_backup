@@ -7,11 +7,11 @@ NC='\033[0;0m'
 
 ###########################################FUNCTIONS-START############################################################
 myExit(){
-	read muell
+	read -r muell
 	return
 
   echo -e "\n Trying to export the Pool anyway"
-  if ! zpool export $backupPool
+  if ! zpool export "$backupPool"
   then
     printf " ${RED}Error:${NC} Backup-device couldn't been exported \n"
   else
@@ -21,7 +21,7 @@ myExit(){
 }
 
 destroySnap(){
-  if ! zfs destroy $1
+  if ! zfs destroy "$1"
   then
     printf "${RED}Error:${NC} Unable to destroy the old Snapshot. -> exit \n"
     myExit
@@ -31,7 +31,7 @@ destroySnap(){
 }
 
 createSnap(){
-  if ! zfs snapshot $1
+  if ! zfs snapshot "$1"
   then
     printf "${RED}Error:${NC} Snapshot couldn't be created -> exit \n"
     myExit
@@ -50,7 +50,7 @@ replicateSnap(){
     echo "To watch the progress run \"watch sudo zpool iostat\" in a extra terminal"
   fi
 
-  if ! zfs send $1 | zfs recv $2 -F
+  if ! zfs send "$1" | zfs recv "$2" -F
   then
     printf "${RED}Error:${NC} Replication \033[1;31mfailed${NC} -> exit\n"
     myExit
@@ -92,7 +92,7 @@ execFunc(){
 	fi
 	
 	echo -e "BackupDataSet ist \"$bakSet\""
-	read -p "Press Enter to continue " muell
+	read -rp "Press Enter to continue " muell
 	
 	##Variables
 	backupPool="backup"
@@ -130,7 +130,7 @@ execFunc(){
 	#myExit
 	#debug-end
 	
-	freeSpaceOnBackup=$(( $freeSpaceOnBackup + $(zfs list -p | grep "${backupPool}/${bakSet} " | tr -s " " | cut -d " " -f 2) )) #zieht den Platz ab der vom Backup verbraucht wird, das eh überschrieben wird (sollten keine Snapshots vorhanden sein, also kann die avail-Spalte verwendet werden)
+	freeSpaceOnBackup=$(( freeSpaceOnBackup + $(zfs list -p | grep "${backupPool}/${bakSet} " | tr -s " " | cut -d " " -f 2) )) #zieht den Platz ab der vom Backup verbraucht wird, das eh überschrieben wird (sollten keine Snapshots vorhanden sein, also kann die avail-Spalte verwendet werden)
 	
 	divisionForGb=1000000000
 	if [[ "$freeSpaceOnBackup" -lt "$needed" ]]
@@ -168,7 +168,7 @@ execFunc(){
 	
 	
 	#Destroy source Snapshot
-	printf "${BLUE}Destroy Source Snapshot: ${backupPool}/${backSet}@${poolSnapshot}${NC}\n"
+	printf "${BLUE}Destroy Source Snapshot: ${backupPool}/${bakSet}@${poolSnapshot}${NC}\n"
 	for processing in "${arraySets[@]}"
 	do
 	  destroySnap "${processing}@${poolSnapshot}"
@@ -193,4 +193,4 @@ execFunc(){
 	exit
 }
 
-execFunc | tee /media/daten/scripts/zfs-bash/backup.log
+execFunc noGui | tee /media/daten/scripts/zfs-bash/backup.log

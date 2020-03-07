@@ -141,7 +141,7 @@ execFunc(){
 	  printf "${GREEN}Successful:${NC} Enough place on BackupPool ($backupPool has $(( 10#${freeSpaceOnBackup} / 10#${divisionForGb} )),$(((10#${freeSpaceOnBackup}%10#${divisionForGb})*10/10#${divisionForGb} )) GB ($freeSpaceOnBackup Bytes) left, there is $(( 10#${needed} / 10#${divisionForGb} )),$(((10#${needed}%10#${divisionForGb})*10/10#${divisionForGb} )) GB ($needed Bytes) to be backedUp)   \n"
 	fi
 	
-	#Destroy Old Backup Snapshot (bisher nicht, da noch nicht jedem der drei Datasets bisher ein Backup liegt)
+	#Destroy Old Backup Snapshot 
 	printf "\n${BLUE}Destroy old Backup Snapshot${NC}\n"
 	
 	for processing in "${arraySets[@]}"
@@ -156,7 +156,6 @@ execFunc(){
 	  createSnap "${processing}@${poolSnapshot}"
 	done
 	
-	
 	#Replication
 	printf "\n${BLUE}Start Replication${NC}\n"
 	for processing in "${arraySets[@]}"
@@ -166,15 +165,12 @@ execFunc(){
 	  replicateSnap "${processing}@${poolSnapshot}" "${backupPool}/${bakSet}/${processing#*/}" "$gui"
 	done
 	
-	
 	#Destroy source Snapshot
 	printf "${BLUE}Destroy Source Snapshot: ${backupPool}/${bakSet}@${poolSnapshot}${NC}\n"
 	for processing in "${arraySets[@]}"
 	do
 	  destroySnap "${processing}@${poolSnapshot}"
 	done
-	
-	
 	
 	#export
 	printf "\n${BLUE}Export Backup device${NC}\n"
@@ -192,5 +188,10 @@ execFunc(){
 	###########################################EXECUTE-SCRIPT-END######################################################
 	exit
 }
+
+path="/media/daten/scripts/zfs-bash/"
+
+mv "${path}/backups.log.0" "${path}/backups.log.1"
+mv "${path}/backups.log" "${path}/backups.log.0"
 
 execFunc noGui | tee /media/daten/scripts/zfs-bash/backup.log

@@ -97,7 +97,7 @@ execFunc(){
 	##Variables
 	backupPool="backup"
 	poolSnapshot="replication"
-	arraySets=("data/home/lukas" "data/daten" "data/daten/downloads" "data/daten/filme")
+	arraySets=("data/home/lukas" "data/daten" "data/daten/downloads" "data/daten/filme" "data/daten/encrypt/beh" "data/daten/encrypt/finan" "data/daten/encrypt/tmp")
 	#backSet von oben
 	
 	#import

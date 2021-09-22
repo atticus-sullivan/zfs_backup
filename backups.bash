@@ -76,17 +76,25 @@ execFunc(){
 	###########################################CHECK-PARAMTETERS-END###################################################
 	
 	###########################################EXECUTE-SCRIPT##########################################################
-	stat=$(cat /media/daten/scripts/zfs-bash/stat.txt)
+
+	# check if started with sudo
+	if [[ "$EUID" -ne 0 ]]
+	then
+		printf "%s\n" "This script has to be run as root (sudo)"
+		exit 1
+	fi
+
+	stat=$(cat ${path}/stat.txt)
 	if [[ "$stat" == "1" ]]
 	then
 	  bakSet=bak1
-	  echo "2" > /media/daten/scripts/zfs-bash/stat.txt #########nur ein Backup vorerst, sonst muss auf den index des nächsten datasets gesetzt werden
+	  echo "2" > ${path}/stat.txt #########nur ein Backup vorerst, sonst muss auf den index des nächsten datasets gesetzt werden
 	elif [[ "$stat" == "2" ]]
 	then
 	  bakSet=bak2
-	  echo "1" > /media/daten/scripts/zfs-bash/stat.txt
+	  echo "1" > ${path}/stat.txt
 	else
-	  printf "${RED}Error:${NC} kein gültiger Wert in /media/daten/scripts/zfs-bash/stat.txt -> exit \n"
+	  printf "${RED}Error:${NC} kein gültiger Wert in ${path}/stat.txt -> exit \n"
 	  exit
 	fi
 	
@@ -183,14 +191,14 @@ execFunc(){
 	
 	printf "\nAll Tasks are ${GREEN}successfully${NC} done at $(date "+%Y-%m-%d %T")\n"
 	
-	date +%m > /media/daten/scripts/zfs-bash/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)
+	date +%m > ${path}/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)
 	###########################################EXECUTE-SCRIPT-END######################################################
 	exit
 }
 
-path="/media/daten/scripts/zfs-bash/"
+path="/media/daten/coding/zfs-bash"
 
-mv "${path}/backups.log.0" "${path}/backups.log.1"
-mv "${path}/backups.log" "${path}/backups.log.0"
+mv "${path}/backup.log.0" "${path}/backup.log.1"
+mv "${path}/backup.log" "${path}/backup.log.0"
 
-execFunc noGui | tee /media/daten/scripts/zfs-bash/backup.log
+execFunc noGui | tee ${path}/backup.log

@@ -32,7 +32,7 @@ destroySnap(){
 createSnap(){
   if ! zfs snapshot "$1"
   then
-    printf "${RED}Error:${NC} Snapshot couldn't be created -> exit \n"
+    printf "${RED}Error:${NC} Snapshot for $1 couldn't be created -> exit \n"
     myExit
   else
     printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), created $1\n"

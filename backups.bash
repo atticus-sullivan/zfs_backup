@@ -7,8 +7,7 @@ NC='\033[0;0m'
 
 ###########################################FUNCTIONS-START############################################################
 myExit(){
-	read -r muell
-	return
+  read -p "enter: " -r muell
 
   echo -e "\n Trying to export the Pool anyway"
   if ! zpool export "$backupPool"

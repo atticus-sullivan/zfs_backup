@@ -103,19 +103,28 @@ execFunc(){
 	
 	##Variables
 	backupPool="backup"
+
+	# requiredPools=("extended" "backup" "saveSpace")
+	requiredPools=("backup")
+
 	poolSnapshot="replication"
-	arraySets=("data/home/lukas" "data/daten" "data/daten/downloads" "data/daten/filme" "data/daten/encrypt/beh" "data/daten/encrypt/finan" "data/daten/encrypt/tmp")
-	#backSet von oben
+
+	arraySets=("data/home/lukas" "data/daten" "data/daten/downloads" "data/daten/filme")
 	
+	# echo ${arraySets[*]%%/*} | tr " " "\n" | sort -u
+
 	#import
-	printf "\n${BLUE}Import the Backup-Device${NC}\n"
-	if ! zpool import $backupPool
-	then
-	  printf "${RED}Error:${NC} Unable to import the BackupPool ($backupPool), make shure the device is connected and isn't imorted -> exit \n"
-	  exit
-	else
-	  printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T")\n\n"
-	fi
+	printf "\n${BLUE}Import Devices${NC}\n"
+	for pool in "${requiredPools[@]}"
+	do
+		if ! zpool import $pool
+		then
+			printf "${RED}Error:${NC} Unable to import the pool ($pool), make shure the device is connected and isn't imorted -> exit \n"
+			exit
+		else
+			printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T")\n\n"
+		fi
+	done
 	
 	#calc space needed
 	needed=0
@@ -125,7 +134,7 @@ execFunc(){
 	  needed=$(( 10#$needed + 10#$tmp ))
 	done
 	
-	#fields bei zfs list: 1.Name    2.used     3.avail     4.refer     5.mountpoint
+	#fields in zfs list: 1.Name    2.used     3.avail     4.refer     5.mountpoint
 	
 	freeSpaceOnBackup=$(zfs list -p | grep "$backupPool " | tr -s " " | cut -d " " -f 3)
 	

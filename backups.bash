@@ -1,5 +1,5 @@
 #!/bin/bash
-#Farben
+#Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[0;44m'
@@ -88,17 +88,17 @@ execFunc(){
 	if [[ "$stat" == "1" ]]
 	then
 	  bakSet=bak1
-	  echo "2" > ${path}/stat.txt #########nur ein Backup vorerst, sonst muss auf den index des nächsten datasets gesetzt werden
+	  echo "2" > ${path}/stat.txt ######### only one additional backup up to now otherwise this has to be set to the index od the next dataset
 	elif [[ "$stat" == "2" ]]
 	then
 	  bakSet=bak2
 	  echo "1" > ${path}/stat.txt
 	else
-	  printf "${RED}Error:${NC} kein gültiger Wert in ${path}/stat.txt -> exit \n"
+	  printf "${RED}Error:${NC} no valid value for ${path}/stat.txt -> exit \n"
 	  exit
 	fi
 	
-	echo -e "BackupDataSet ist \"$bakSet\""
+	echo -e "BackupDataSet is \"$bakSet\""
 	read -rp "Press Enter to continue " muell
 	
 	##Variables
@@ -145,8 +145,9 @@ execFunc(){
 	#zfs list -p | grep "${backupPool}/${bakSet} " | tr -s " " | cut -d " " -f 2
 	#myExit
 	#debug-end
-	
-	freeSpaceOnBackup=$(( freeSpaceOnBackup + $(zfs list -p | grep "${backupPool}/${bakSet} " | tr -s " " | cut -d " " -f 2) )) #zieht den Platz ab der vom Backup verbraucht wird, das eh überschrieben wird (sollten keine Snapshots vorhanden sein, also kann die avail-Spalte verwendet werden)
+
+	# subtracts the space used by the backup which will get overwritten (since no additional snapshots should be available, the avail column can be used
+	freeSpaceOnBackup=$(( freeSpaceOnBackup + $(zfs list -p | grep "${backupPool}/${bakSet} " | tr -s " " | cut -d " " -f 2) ))
 	
 	divisionForGb=1000000000
 	if [[ "$freeSpaceOnBackup" -lt "$needed" ]]

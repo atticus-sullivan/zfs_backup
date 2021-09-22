@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Farben
+#Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[0;44m'
@@ -27,7 +27,7 @@ do
 	do
 		printf "${BLUE}Create backup/bak${num}/${ds} and create snapshot @replication${NC}\n"
 		zfs create backup/bak${num}/${ds} || myExit
-		if [[ "$ds" != "home" ]] #kein home@replication sollte da sein
+		if [[ "$ds" != "home" ]] #no home@replication should be present
 		then
 			zfs snapshot backup/bak${num}/${ds}@replication || myExit
 		fi

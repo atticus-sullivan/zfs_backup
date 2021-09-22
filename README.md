@@ -9,6 +9,8 @@ This is a collection of scripts for the use of making backups on a zfs.
 
 The current script always lets the last backup on the backup device alive so that always two backups are present, the one you're currently making and the last one.
 
+The curent script assumes that on each backupSet (`bak{number}`) the corresponding datasets for the backup already exist and that there is a snapshot called `replication` on each of this datasets.
+
 # The variables
 variable name | description
 -------|-------

@@ -101,6 +101,54 @@ init(){
 		read -ep "Enter to continue: " muell 2>&1
 		printf "\n"
 
+		printf "%s\n" \
+			"Would you like to check your config, before continuing?" \
+			"Attention: All devices needed for backupping have to be plugged in to be able to check the config"
+		read -ep "[Y]es/[n]o " resp 2>&1
+		if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+		then
+			readarray -t requiredPools <<<$(printf "%s\n" "${arraySets[@]}" | awk -F"/" '{print $1}' | sort -u)
+			requiredPools+=("${backupPool}")
+
+			readarray -t zfsImported <<<$(zpool list | sed 's/  \+/\t/g' | awk -F $'\t' 'NR>1 {print $1}')
+
+			for pool in "${requiredPools[@]}"
+			do
+				if contains "$pool" "${zfsImported[@]}"
+				then
+					continue
+				fi
+				if ! zfs import "$pools"
+				then
+					printf "Error" # TODO error messages
+					exit 1
+				fi
+			done
+
+			for ds in arraySets
+			do
+				if ! zfs list "$ds"
+				then
+					printf "Error" # TODO error messages
+					exit 1
+				fi
+			done
+
+			for pool in "${requiredPools[@]}"
+			do
+				if contains "$pool" "${zfsImported[@]}"
+				then
+					continue
+				fi
+				if ! zfs export "$pools" # TODO error messages
+				then
+					printf "Error"
+					exit 1
+				fi
+			done
+		fi
+
+
 		{
 			printf "%s\n" "backupPool=\"${backupPool}\""
 

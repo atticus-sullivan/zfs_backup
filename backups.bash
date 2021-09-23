@@ -60,42 +60,22 @@ createSnap(){
 }
 
 replicateSnap(){
-  printf "Replicate $1 > $2\nDo ${RED}not${NC} interrupt this process!!!\n"
+	printf "Replicate $1 > $2\nDo ${RED}not${NC} interrupt this process!!!\n"
 
-  if [[ "$3" == 1 ]]
-  then
-    gnome-terminal -e "watch zpool iostat"
-  else
-    echo "To watch the progress run \"watch sudo zpool iostat\" in a extra terminal"
-  fi
+	echo "To watch the progress run \"watch sudo zpool iostat\" in a extra terminal"
 
-  if ! zfs send "$1" | zfs recv "$2" -F
-  then
-    printf "${RED}Error:${NC} Replication \033[1;31mfailed${NC} -> exit\n"
-    myExit
-  else
-    printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), $1 > $2\n\n"
-  fi
+	if ! zfs send "$1" | zfs recv "$2" -F
+	then
+		printf "${RED}Error:${NC} Replication \033[1;31mfailed${NC} -> exit\n"
+		myExit
+	else
+		printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), $1 > $2\n\n"
+	fi
 }
 ###########################################FUNCTIONS-END############################################################
 
-###########################################CHECK-PARAMTETERS########################################################
+###########################################EXECUTE-SCRIPT##########################################################
 execFunc(){
-	i=1
-	gui=0
-	for argument in "$@"
-	do
-	  echo "Argument ${i}: \"$argument\""
-	
-	  if [[ "$argument" == "--gui" ]]
-	  then
-	    gui=1
-	    echo "Executing script for with a gui environment"
-	  fi
-	done
-	###########################################CHECK-PARAMTETERS-END###################################################
-	
-	###########################################EXECUTE-SCRIPT##########################################################
 
 	stat=$(cat ${path}/stat.txt)
 	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 %% "$stat" -lt "${#backupDsNames[@]}" ) ]]
@@ -177,7 +157,7 @@ execFunc(){
 	do
 	  echo -e "\n\n"
 	  zpool iostat
-	  replicateSnap "${processing}@${poolSnapshot}" "${backupPool}/${bakSet}/${processing#*/}" "$gui"
+	  replicateSnap "${processing}@${poolSnapshot}" "${backupPool}/${bakSet}/${processing#*/}"
 	done
 	
 	#Destroy source Snapshot

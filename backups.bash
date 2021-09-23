@@ -276,7 +276,7 @@ execFunc(){
 	
 	printf "\nAll Tasks are ${GREEN}successfully${NC} done at $(date "+%Y-%m-%d %T")\n"
 	
-	date +%m > ${path}/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)
+	date +%s > ${path}/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)
 	###########################################EXECUTE-SCRIPT-END######################################################
 	exit
 }

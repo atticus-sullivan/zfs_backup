@@ -28,7 +28,7 @@ myExit(){
 	printf "Task ${REED}failed${NC}!\nTrying to export the backup-pool anyway.\n"
 	zpool export backup && printf "Exporting ${GREEN}successful${NC} " || printf "Exporting ${RED}failed${NC} "
 	printf "-> exit"
-	exit
+	exit 1
 }
 
 check if started with sudo

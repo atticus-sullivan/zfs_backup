@@ -5,12 +5,20 @@ RED='\033[0;31m'
 BLUE='\033[0;44m'
 NC='\033[0;0m'
 
+# echo "\"$path\""
+
+# note that init is not logged
+if ! init
+then
+	exit 1
+fi
+
 path="$(readlink -f "${0%/*}")" # collect the path from how the script was called and canonicalize the path
 #############################################LOAD-CONFIG##############################################################
 # global variables with respect to configuration are stored in the backup.cfg file
-if [[ -f ./backup.cfg ]]
+if [[ -f ${path}/backup.cfg ]]
 then
-	source ./backup.cfg
+	source ${path}/backup.cfg
 fi
 
 if [[ ! (-v backupPool && -v requiredPools && -v poolSnapshot && -v arraySets) ]]
@@ -27,7 +35,7 @@ fi
 
 ###########################################FUNCTIONS-START############################################################
 myExit(){
-  read -p "enter: " -r muell
+  read -ep "enter: " -r muell 2>&1
 
   echo -e "\n Trying to export the Pool anyway"
   if ! zpool export "$backupPool"
@@ -37,6 +45,93 @@ myExit(){
     printf " ${GREEN}Successful${NC} \n"
   fi
   exit
+}
+
+init(){
+	if [[ -f init ]]
+	then # already initialized
+		return
+	fi
+	printf "Do you want to initialize? (guided config creation)\n"
+	read -ep "[Y]es/[n]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y" || "$resp" == "" ]]
+	then
+		backupPool=""
+		printf "\n"
+		# TODO @Gala check ob pool existiert? Evtl nicht möglich, da nicht eingesteckt...
+		read -ep "Name of the pool on which the backups should be on: " backupPool 2>&1
+		printf "\n"
+
+		printf "%s\n" \
+			"Names/Paths of the datasets that should be used for the backup" \
+			"e.g. 'bak1' 'bak2' -> one backup is on dataset 'bak1' and one is on 'bak2' -> the last backup is always available in addition to the current one" \
+			"Note that the number of sets you specify here determines how many backups are left on the backupPool" \
+			"" \
+			"Give the names/paths line by line for each dataset (simply press enter to finish entering new datasets)"
+		backupDsNames=()
+		ds="x"
+		while [[ "$ds" != "" ]]
+		do
+			read -ep "Name/Path: " ds 2>&1
+			[[ "$ds" == "" ]] && continue
+			backupDsNames+=("$ds")
+		done
+		printf "Datasets used for backup: "
+		declare -p backupDsNames
+		read -ep "Enter to continue: " muell 2>&1
+		printf "\n"
+
+		poolSnapshot=""
+		read -ep "Name of the snapshot used for replication: " poolSnapshot 2>&1 # TODO @Gala "replication" als default?
+		printf "\n"
+
+		printf "%s\n" \
+			"Paths of the datasets that should be backed up" \
+			"Give the names/paths line by line for each dataset (simply press enter to finish entering new datasets)"
+		arraySets=()
+		ds="x"
+		while [[ "$ds" != "" ]]
+		do
+			read -ep "Name/Path: " ds 2>&1
+			[[ "$ds" == "" ]] && continue
+			arraySets+=("$ds")
+		done
+		printf "Datasets that are backed up: "
+		declare -p arraySets
+		read -ep "Enter to continue: " muell 2>&1
+		printf "\n"
+
+		{
+			printf "%s\n" "backupPool=\"${backupPool}\""
+
+			printf "backupDsNames=("
+			printf "\"%s\" " "${backupDsNames[@]}"
+			printf ")\n\n"
+
+			printf "%s\n\n" "poolSnapshot=\"${poolSnapshot}\""
+
+			printf "arraySets=("
+			printf "\"%s\" " "${arraySets[@]}"
+			printf ")\n"
+		} > ${path}/backup.cfg
+
+	fi
+
+	printf "%s\n" \
+		"Would you like to create the datasets and snapshots nessacary to run the backup (only nessacary the first time)?" \
+		"(if you have already created the backupDatasets and the snapshot per backupDataset you can skip this)"
+	read -ep "[Y]es/[n]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+	then
+		if ! ${path}/createBackupDS.bash
+		then
+			printf "${RED}Error:${NC} failure in creation of the datasets -> abort"
+			exit 1
+		fi
+	fi
+
+	printf "Initialisation finished, to rerun this assistant, delete ${path}/init\n"
+	touch "${path}init"
 }
 
 destroySnap(){
@@ -76,18 +171,20 @@ replicateSnap(){
 
 ###########################################EXECUTE-SCRIPT##########################################################
 execFunc(){
-
 	stat=$(cat ${path}/stat.txt)
 	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 && "$stat" -lt "${#backupDsNames[@]}" ) ]]
 	then
-		printf "${RED}Error:${NC} no valid value for ${path}/stat.txt -> exit\n       This shouldn't have happened if you didn't modify the file" #TODO @Gala hint für unerfahrene user hier?
+		printf "${RED}Error:${NC}"
+		printf "%s\n" \
+			" no valid value for ${path}/stat.txt -> exit" \
+			"       This shouldn't have happened if you didn't modify the file" #TODO @Gala hint für unerfahrene user hier?
 		exit 1
 	fi
 	echo "$(( (stat + 1) % ${#backupDsNames[@]} ))" > ${path}/stat.txt
 	bakSet="${backupDsNames[stat]}"
 	
 	echo -e "BackupDataSet is \"$bakSet\""
-	read -rp "Press Enter to continue (ctrl+C to abort) " muell
+	read -ep "Press Enter to continue (ctrl+C to abort) " muell 2>&1
 	
 	# echo ${arraySets[*]%%/*} | tr " " "\n" | sort -u
 
@@ -183,8 +280,6 @@ execFunc(){
 	###########################################EXECUTE-SCRIPT-END######################################################
 	exit
 }
-
-path="/media/daten/coding/zfs-bash"
 
 # check if started with sudo
 if [[ "$EUID" -ne 0 ]]

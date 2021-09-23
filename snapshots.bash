@@ -1,59 +1,63 @@
 #!/bin/bash
 
-	# check if started with sudo
-	if [[ "$EUID" -ne 0 ]]
+prCron(){
+	duration="$1"
+	prefix="$2"
+	type="$3"
+	shift 3
+
+	if [[ ! ( -d "/etc/cron.${type}" && ! -f "/etc/cron.${type}/zfsnap" ) ]]
 	then
-		printf "%s\n" "This script has to be run as root (sudo)"
-		exit 1
+		printf "\"/etc/cron.${type}\" not present or \"/etc/cron.${type}/zfsnap\" is already present -> skipping\n"
+		return
 	fi
 
-if [[ -d "/etc/cron.hourly" && ! -f "/etc/cron.hourly/zfsnap" ]]
+	{
+		printf "%s\n" \
+			"#!/bin/bash" \
+			"" \
+			"#create snapshots"
+		printf "/usr/bin/zfsnap snapshot -a ${duration} -p ${prefix} %s\n" "$@"
+		printf "%s\n" \
+			"" \
+			"#destroy expired snapshots"
+		printf "/usr/bin/zfsnap destroy -p ${prefix} -v %s\n" "$@"
+	} > /etc/cron.${type}/zfsnap
+	sudo chown root:root "/etc/cron.${type}/zfsnap"
+	sudo chmod 755 "/etc/cron.${type}/zfsnap"
+}
+
+# check if started with sudo
+if [[ "$EUID" -ne 0 ]]
 then
-	cat > /etc/cron.hourly/zfsnap << EOF
-#!/bin/bash
-
-#create snapshots
-/usr/bin/zfsnap snapshot -a 1d -p _HOURLY_ data/daten
-
-#destroy expired snapshots
-/usr/bin/zfsnap destroy -p _HOURLY_ -v data/daten
-EOF
-	sudo chown root:root "/etc/cron.hourly/zfsnap"
-	sudo chmod 755 "/etc/cron.hourly/zfsnap"
-else
-	printf "\"/etc/cron.hourly\" not present or \"/etc/cron.hourly/zfsnap\" is already present -> skipping\n"
+	printf "%s\n" "This script has to be run as root (sudo)"
+	exit 1
 fi
 
-if [[ -d "/etc/cron.weekly" && ! -f "/etc/cron.weekly/zfsnap" ]]
-then
-	cat > /etc/cron.weekly/zfsnap << EOF
-#!/bin/bash
+for t in hourly daily weekly
+do
+	printf "\n\n$t snapshots?\n"
+	read -ep "[y]es/[N]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y" ]]
+	then
+		printf "\nHow long should these snapshots last? (see \`man zfsnap\` -> TTL Syntax, but I allow only [num][modifier])\n"
+		read -p "Duration: " duration
 
-#create snapshots
-/usr/bin/zfsnap snapshot -a 1m -p _WEEKLY_ data/daten
+		printf "\nWhat should be the prefix of the snapshots?\n"
+		read -p "Prefix: " prefix
 
-#destroy expired snapshots
-/usr/bin/zfsnap destroy -p _WEEKLY_ -v data/daten
-EOF
-	sudo chown root:root "/etc/cron.weekly/zfsnap"
-	sudo chmod 755 "/etc/cron.weekly/zfsnap"
-else
-	printf "\"/etc/cron.weekly\" not present or \"/etc/cron.weekly/zfsnap\" is already present -> skipping\n"
-fi
+		if [[ "$prefix" == "" || "$duration" == "" ]]
+		then
+			printf "Error: Prefix/duration cannot be empty\n"
+			exit 1
+		fi
+		if [[ ! ( "$duration" =~ [1-9][0-9]*[ymwdhMs] ) ]]
+		then
+			printf "Error: Duration is not valid\n"
+			exit 1
+		fi
 
-if [[ -d "/etc/cron.daily" && ! -f "/etc/cron.daily/zfsnap" ]]
-then
-	cat > /etc/cron.daily/zfsnap << EOF
-#!/bin/bash
-
-#create snapshots
-/usr/bin/zfsnap snapshot -a 1w -p _DAILY_ data/daten
-
-#destroy expired snapshots
-/usr/bin/zfsnap destroy -p _DAILY_ -v data/daten
-EOF
-	sudo chown root:root "/etc/cron.daily/zfsnap"
-	sudo chmod 755 "/etc/cron.daily/zfsnap"
-else
-	printf "\"/etc/cron.daily\" not present or \"/etc/cron.daily/zfsnap\" is already present -> skipping\n"
-fi
+		prCron "$duration" "$prefix" "$t" "$@"
+	fi
+done
+printf "\n"

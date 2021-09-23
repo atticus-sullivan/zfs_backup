@@ -3,9 +3,15 @@ This is a collection of scripts for the use of making backups on a zfs.
 
 # How to use this
 - Clone this repo or download it somehow
-- Ajust the `backup.cfg` to suit your setup. Make sure to fullfill the
-  prerequisites stated below before running `backups.bash`
+- Run `backup.bash` and go through the guided setup. Alternatively: Ajust the
+  `backup.cfg` to suit your setup. Make sure to fullfill the
+  prerequisites stated below before running `backups.bash` and create an empty
+  file `init` (avoids running the guided init)
 - Afterwards just execute the `backups.bash` script (as root) and the backup will be made
+
+The guided init can also setup a reminder and periodic snapshots. The latter
+requires `zfsnap` being installed (at `/usr/share/zfsnap`), both require
+`anacron` being installed.
 
 # The variables
 variable name | description

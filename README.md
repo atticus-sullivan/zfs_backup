@@ -23,7 +23,9 @@ backup-pool (e.g. `"bak1" "bak2"` means that there will always be two backups,
 the previous one and the current one)
 
 # Prerequisites
-To successfully run the `backups.bash`, the datasets specified as `backupDsNames` all have to exist. In addition, on each of these sets there have to be datasets with the same name/path as the ones you want to back up.
+To successfully run the `backups.bash`, the datasets specified as
+`backupDsNames` all have to exist. In addition, on each of these sets there have
+to be datasets with the same name/path as the ones you want to back up.
 
 Example: `backupPool=backup ; backupDsNames=("bak1" "bak2") ; arraySets=("data/daten data/home")`
 then the Datasets `backup/bak1`, `backup/bak2`, `backup/bak1/daten`,
@@ -33,4 +35,5 @@ Hint: You can create this structure quickly via the `createBackupDS.bash`
 utility which uses the same `backup.cfg` as `backups.bash`
 
 # Credits
-A huge thank you to Galatheas for pointing me to zfs and the basic framework of the `backups.bash` script originates from him too
+A huge thank you to Galatheas for pointing me to zfs and the basic framework of
+the `backups.bash` script originates from him too

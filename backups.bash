@@ -78,7 +78,7 @@ replicateSnap(){
 execFunc(){
 
 	stat=$(cat ${path}/stat.txt)
-	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 %% "$stat" -lt "${#backupDsNames[@]}" ) ]]
+	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 && "$stat" -lt "${#backupDsNames[@]}" ) ]]
 	then
 		printf "${RED}Error:${NC} no valid value for ${path}/stat.txt -> exit\n       This shouldn't have happened if you didn't modify the file" #TODO @Gala hint für unerfahrene user hier?
 		exit 1
@@ -196,4 +196,4 @@ fi
 mv "${path}/backup.log.0" "${path}/backup.log.1"
 mv "${path}/backup.log" "${path}/backup.log.0"
 
-execFunc noGui | tee ${path}/backup.log
+execFunc | tee ${path}/backup.log

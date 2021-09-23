@@ -130,6 +130,40 @@ init(){
 		fi
 	fi
 
+	printf "%s\n" \
+		"Would you like to get a reminder for backing up? (requires anacron)"
+	read -ep "[y]es/[N]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y" ]]
+	then
+		printf "Each how many days do you want to be reminded?\n"
+		read -ep "days: " days 2>&1
+		cat > /etc/cron.daily/zfsBackupReminder << EOF
+#!/bin/bash
+lastBackupDone="\$(cat "${path}/backupDone.txt")"
+now="\$(date +%s)"
+daysAgo="\$(( (10#\$now - 10#\$lastBackupDone) / (60*60*24) ))"
+
+printf "Last backup is \$daysAgo days ago\n"
+
+if [[ "\$daysAgo" -ge "$days" ]]
+then
+    notify-send "Backups" "Please make a backup again"
+fi
+EOF
+	fi
+
+	printf "%s\n" \
+		"Would you like to setup periodic snapshotting? (requires anacron)"
+	read -ep "[y]es/[N]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y" ]]
+	then
+		if ! ${path}/snapshots.bash "${arraySets[@]}"
+		then
+			printf "${RED}Error:${NC} failure in setting up periodic snapshotting -> abort"
+			exit 1
+		fi
+	fi
+
 	printf "Initialisation finished, to rerun this assistant, delete ${path}/init\n"
 	touch "${path}init"
 }

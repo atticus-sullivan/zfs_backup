@@ -5,6 +5,26 @@ RED='\033[0;31m'
 BLUE='\033[0;44m'
 NC='\033[0;0m'
 
+path="$(readlink -f "${0%/*}")" # collect the path from how the script was called and canonicalize the path
+#############################################LOAD-CONFIG##############################################################
+# global variables with respect to configuration are stored in the backup.cfg file
+if [[ -f ./backup.cfg ]]
+then
+	source ./backup.cfg
+fi
+
+if [[ ! (-v backupPool && -v requiredPools && -v poolSnapshot && -v arraySets) ]]
+then
+	printf "${RED}Error:${NC} "
+	printf "%s\n" \
+		"Global variables are missing, most probably some settings in the 'backup.cfg' are missing." \
+		"       See the 'backup.cfg.def' for an example." \
+		"       List of needed variables: backupPool, requiredPools, poolSnapshot, arraySets"
+	exit 2
+else
+	echo "Everything set"
+fi
+
 ###########################################FUNCTIONS-START############################################################
 myExit(){
   read -p "enter: " -r muell
@@ -77,39 +97,17 @@ execFunc(){
 	
 	###########################################EXECUTE-SCRIPT##########################################################
 
-	# check if started with sudo
-	if [[ "$EUID" -ne 0 ]]
+	stat=$(cat ${path}/stat.txt)
+	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 %% "$stat" -lt "${#backupDsNames[@]}" ) ]]
 	then
-		printf "%s\n" "This script has to be run as root (sudo)"
+		printf "${RED}Error:${NC} no valid value for ${path}/stat.txt -> exit\n       This shouldn't have happened if you didn't modify the file" #TODO @Gala hint für unerfahrene user hier?
 		exit 1
 	fi
-
-	stat=$(cat ${path}/stat.txt)
-	if [[ "$stat" == "1" ]]
-	then
-	  bakSet=bak1
-	  echo "2" > ${path}/stat.txt ######### only one additional backup up to now otherwise this has to be set to the index od the next dataset
-	elif [[ "$stat" == "2" ]]
-	then
-	  bakSet=bak2
-	  echo "1" > ${path}/stat.txt
-	else
-	  printf "${RED}Error:${NC} no valid value for ${path}/stat.txt -> exit \n"
-	  exit
-	fi
+	echo "$(( (stat + 1) % ${#backupDsNames[@]} ))" > ${path}/stat.txt
+	bakSet="${backupDsNames[stat]}"
 	
 	echo -e "BackupDataSet is \"$bakSet\""
-	read -rp "Press Enter to continue " muell
-	
-	##Variables
-	backupPool="backup"
-
-	# requiredPools=("extended" "backup" "saveSpace")
-	requiredPools=("backup")
-
-	poolSnapshot="replication"
-
-	arraySets=("data/home/lukas" "data/daten" "data/daten/downloads" "data/daten/filme")
+	read -rp "Press Enter to continue (ctrl+C to abort) " muell
 	
 	# echo ${arraySets[*]%%/*} | tr " " "\n" | sort -u
 
@@ -207,6 +205,13 @@ execFunc(){
 }
 
 path="/media/daten/coding/zfs-bash"
+
+# check if started with sudo
+if [[ "$EUID" -ne 0 ]]
+then
+	printf "%s\n" "This script has to be run as root (sudo)"
+	exit 1
+fi
 
 mv "${path}/backup.log.0" "${path}/backup.log.1"
 mv "${path}/backup.log" "${path}/backup.log.0"

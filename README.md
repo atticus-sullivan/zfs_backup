@@ -13,6 +13,9 @@ The guided init can also setup a reminder and periodic snapshots. The latter
 requires `zfsnap` being installed (at `/usr/share/zfsnap`), both require
 `anacron` being installed.
 
+**Note:** The reminder currently is **not** working since `notify-send` executed
+as root (executed from anacron will not raise a notification for you)
+
 # The variables
 variable name | description
 -------|-------

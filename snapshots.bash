@@ -1,20 +1,59 @@
 #!/bin/bash
 
-#pool=data
+	# check if started with sudo
+	if [[ "$EUID" -ne 0 ]]
+	then
+		printf "%s\n" "This script has to be run as root (sudo)"
+		exit 1
+	fi
 
-#zfsnap snapshot -n -a 1 day -p _HOURLY_ -r data
-#zfsnap snapshot -n -a 1 week -p _DAILY_ -r data
-#zfsnap snapshot -n -a 1 month -p _WEEKLY_ -r data
+if [[ -d "/etc/cron.hourly" && ! -f "/etc/cron.hourly/zfsnap" ]]
+then
+	cat > /etc/cron.hourly/zfsnap << EOF
+#!/bin/bash
 
+#create snapshots
+/usr/bin/zfsnap snapshot -a 1d -p _HOURLY_ data/daten
 
-###########Stündliche Snapshots################
-#5   *   *   *   *   root zfsnap snapshot -a 1 day -p _HOURLY_ -r data
-#7   *   *   *   *   root zfsnap destroy -p _HOURLY_ -r data
+#destroy expired snapshots
+/usr/bin/zfsnap destroy -p _HOURLY_ -v data/daten
+EOF
+	sudo chown root:root "/etc/cron.hourly/zfsnap"
+	sudo chmod 755 "/etc/cron.hourly/zfsnap"
+else
+	printf "\"/etc/cron.hourly\" not present or \"/etc/cron.hourly/zfsnap\" is already present -> skipping\n"
+fi
 
-############Tägliche Snapshots##################
-#0   0   *   *   *   root zfsnap snapshot -a 1 day -p _HOURLY_ -r data
-#0   0   *   *   *   root zfsnap destroy -p _HOURLY_ -r data
+if [[ -d "/etc/cron.weekly" && ! -f "/etc/cron.weekly/zfsnap" ]]
+then
+	cat > /etc/cron.weekly/zfsnap << EOF
+#!/bin/bash
 
-##########Wöchentliche Snapshots################
-#0   0   *   *   *   root zfsnap snapshot -a 1 day -p _HOURLY_ -r data
-#0   0   *   *   0   root zfsnap destroy -p _HOURLY_ -r data
+#create snapshots
+/usr/bin/zfsnap snapshot -a 1m -p _WEEKLY_ data/daten
+
+#destroy expired snapshots
+/usr/bin/zfsnap destroy -p _WEEKLY_ -v data/daten
+EOF
+	sudo chown root:root "/etc/cron.weekly/zfsnap"
+	sudo chmod 755 "/etc/cron.weekly/zfsnap"
+else
+	printf "\"/etc/cron.weekly\" not present or \"/etc/cron.weekly/zfsnap\" is already present -> skipping\n"
+fi
+
+if [[ -d "/etc/cron.daily" && ! -f "/etc/cron.daily/zfsnap" ]]
+then
+	cat > /etc/cron.daily/zfsnap << EOF
+#!/bin/bash
+
+#create snapshots
+/usr/bin/zfsnap snapshot -a 1w -p _DAILY_ data/daten
+
+#destroy expired snapshots
+/usr/bin/zfsnap destroy -p _DAILY_ -v data/daten
+EOF
+	sudo chown root:root "/etc/cron.daily/zfsnap"
+	sudo chmod 755 "/etc/cron.daily/zfsnap"
+else
+	printf "\"/etc/cron.daily\" not present or \"/etc/cron.daily/zfsnap\" is already present -> skipping\n"
+fi

@@ -21,13 +21,13 @@ then
 	source ${path}/backup.cfg
 fi
 
-if [[ ! (-v backupPool && -v requiredPools && -v poolSnapshot && -v arraySets) ]]
+if [[ ! (-v backupPool && -v poolSnapshot && -v arraySets) ]]
 then
 	printf "${RED}Error:${NC} "
 	printf "%s\n" \
 		"Global variables are missing, most probably some settings in the 'backup.cfg' are missing." \
 		"       See the 'backup.cfg.def' for an example." \
-		"       List of needed variables: backupPool, requiredPools, poolSnapshot, arraySets"
+		"       List of needed variables: backupPool, poolSnapshot, arraySets"
 	exit 2
 else
 	echo "Everything set"
@@ -167,6 +167,19 @@ replicateSnap(){
 		printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), $1 > $2\n\n"
 	fi
 }
+
+contains(){
+	key=$1
+	shift 1
+	for ele in "$@"
+	do
+		if [[ "$ele" == "$key" ]]
+		then
+			return 0
+		fi
+	done
+	return 1
+}
 ###########################################FUNCTIONS-END############################################################
 
 ###########################################EXECUTE-SCRIPT##########################################################
@@ -188,10 +201,21 @@ execFunc(){
 	
 	# echo ${arraySets[*]%%/*} | tr " " "\n" | sort -u
 
+	readarray -t requiredPools <<<$(printf "%s\n" "${arraySets[@]}" | awk -F"/" '{print $1}' | sort -u)
+	requiredPools+=("${backupPool}")
+
+	readarray -t zfsImported <<<$(zpool list | sed 's/  \+/\t/g' | awk -F $'\t' 'NR>1 {print $1}')
+
 	#import
 	printf "\n${BLUE}Import Devices${NC}\n"
 	for pool in "${requiredPools[@]}"
 	do
+		# don't import pools that are already imported
+		if contains "$pool" "${zfsImported[@]}"
+		then
+			continue
+		fi
+
 		if ! zpool import $pool
 		then
 			printf "${RED}Error:${NC} Unable to import the pool ($pool), make shure the device is connected and isn't imorted -> exit \n"
@@ -266,14 +290,23 @@ execFunc(){
 	
 	#export
 	printf "\n${BLUE}Export Backup device${NC}\n"
-	if ! zpool export $backupPool
-	then
-	  printf "${RED}Error:${NC} Backup-device couldn't been exported \n"
-	  exit
-	else
-	  printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), exported $backupPool\n"
-	fi
-	
+	for pool in "${requiredPools[@]}"
+	do
+		# don't import pools that are already imported
+		if contains "$pool" "${zfsImported[@]}"
+		then
+			continue
+		fi
+
+		if ! zpool import $pool
+		then
+			printf "${RED}Error:${NC} $pool couldn't been exported \n"
+			exit 1
+		else
+			printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T")\n\n"
+		fi
+	done
+
 	printf "\nAll Tasks are ${GREEN}successfully${NC} done at $(date "+%Y-%m-%d %T")\n"
 	
 	date +%s > ${path}/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)

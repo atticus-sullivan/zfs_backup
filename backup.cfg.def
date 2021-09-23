@@ -1,0 +1,6 @@
+backupPool="backup"
+backupDsNames=("bak1" "bak2" )
+
+poolSnapshot="repl"
+
+arraySets=("data/daten" "data/home" )

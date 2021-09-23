@@ -9,7 +9,7 @@ prCron(){
 	if [[ ! ( -d "/etc/cron.${type}" && ! -f "/etc/cron.${type}/zfsnap" ) ]]
 	then
 		printf "\"/etc/cron.${type}\" not present or \"/etc/cron.${type}/zfsnap\" is already present -> skipping\n"
-		return
+		return 0
 	fi
 
 	{
@@ -25,6 +25,7 @@ prCron(){
 	} > /etc/cron.${type}/zfsnap
 	sudo chown root:root "/etc/cron.${type}/zfsnap"
 	sudo chmod 755 "/etc/cron.${type}/zfsnap"
+	return 0
 }
 
 # check if started with sudo
@@ -61,3 +62,4 @@ do
 	fi
 done
 printf "\n"
+exit 0

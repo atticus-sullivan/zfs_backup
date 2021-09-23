@@ -5,35 +5,8 @@ RED='\033[0;31m'
 BLUE='\033[0;44m'
 NC='\033[0;0m'
 
-# echo "\"$path\""
-
-# note that init is not logged
-if ! init
-then
-	exit 1
-fi
-
-path="$(readlink -f "${0%/*}")" # collect the path from how the script was called and canonicalize the path
-#############################################LOAD-CONFIG##############################################################
-# global variables with respect to configuration are stored in the backup.cfg file
-if [[ -f ${path}/backup.cfg ]]
-then
-	source ${path}/backup.cfg
-fi
-
-if [[ ! (-v backupPool && -v poolSnapshot && -v arraySets) ]]
-then
-	printf "${RED}Error:${NC} "
-	printf "%s\n" \
-		"Global variables are missing, most probably some settings in the 'backup.cfg' are missing." \
-		"       See the 'backup.cfg.def' for an example." \
-		"       List of needed variables: backupPool, poolSnapshot, arraySets"
-	exit 2
-else
-	echo "Everything set"
-fi
-
 ###########################################FUNCTIONS-START############################################################
+
 myExit(){
   read -ep "enter: " -r muell 2>&1
 
@@ -47,11 +20,56 @@ myExit(){
   exit
 }
 
-init(){
-	if [[ -f init ]]
-	then # already initialized
-		return
+checkConfig(){
+	printf "%s\n" \
+		"Would you like to check your config, before continuing?" \
+		"Attention: All devices needed for backupping have to be plugged in to be able to check the config"
+	read -ep "[Y]es/[n]o " resp 2>&1
+	if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+	then
+		readarray -t requiredPools <<<$(printf "%s\n" "${arraySets[@]}" | awk -F"/" '{print $1}' | sort -u)
+		requiredPools+=("${backupPool}")
+
+		readarray -t zfsImported <<<$(zpool list | sed 's/  \+/\t/g' | awk -F $'\t' 'NR>1 {print $1}')
+
+		for pool in "${requiredPools[@]}"
+		do
+			if contains "$pool" "${zfsImported[@]}"
+			then # already imported pools do not have to be imported
+				continue
+			fi
+			if ! zfs import "$pools"
+			then
+				printf "${RED}Error:${NC} importing $pool\n"
+				return 1
+			fi
+		done
+
+		for ds in arraySets
+		do
+			if ! zfs list "$ds" &>/dev/null
+			then
+				printf "${RED}Error:${NC} dataset $ds was not found\n"
+				return 1
+			fi
+		done
+
+		for pool in "${requiredPools[@]}"
+		do
+			if contains "$pool" "${zfsImported[@]}"
+			then # pools previously imported shouldn't be exported
+				continue
+			fi
+			if ! zfs export "$pools"
+			then
+				printf "${RED}Error:${NC} exporting $pool\n"
+				return 1
+			fi
+		done
 	fi
+}
+
+collectWriteConfig(){
 	printf "Do you want to initialize? (guided config creation)\n"
 	read -ep "[Y]es/[n]o " resp 2>&1
 	if [[ "$resp" == "y" || "$resp" == "Y" || "$resp" == "" ]]
@@ -101,53 +119,10 @@ init(){
 		read -ep "Enter to continue: " muell 2>&1
 		printf "\n"
 
-		printf "%s\n" \
-			"Would you like to check your config, before continuing?" \
-			"Attention: All devices needed for backupping have to be plugged in to be able to check the config"
-		read -ep "[Y]es/[n]o " resp 2>&1
-		if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+		if ! checkConfig
 		then
-			readarray -t requiredPools <<<$(printf "%s\n" "${arraySets[@]}" | awk -F"/" '{print $1}' | sort -u)
-			requiredPools+=("${backupPool}")
-
-			readarray -t zfsImported <<<$(zpool list | sed 's/  \+/\t/g' | awk -F $'\t' 'NR>1 {print $1}')
-
-			for pool in "${requiredPools[@]}"
-			do
-				if contains "$pool" "${zfsImported[@]}"
-				then
-					continue
-				fi
-				if ! zfs import "$pools"
-				then
-					printf "Error" # TODO error messages
-					exit 1
-				fi
-			done
-
-			for ds in arraySets
-			do
-				if ! zfs list "$ds"
-				then
-					printf "Error" # TODO error messages
-					exit 1
-				fi
-			done
-
-			for pool in "${requiredPools[@]}"
-			do
-				if contains "$pool" "${zfsImported[@]}"
-				then
-					continue
-				fi
-				if ! zfs export "$pools" # TODO error messages
-				then
-					printf "Error"
-					exit 1
-				fi
-			done
+			return 1
 		fi
-
 
 		{
 			printf "%s\n" "backupPool=\"${backupPool}\""
@@ -162,9 +137,11 @@ init(){
 			printf "\"%s\" " "${arraySets[@]}"
 			printf ")\n"
 		} > ${path}/backup.cfg
-
 	fi
+	return 0
+}
 
+createBackupDS(){
 	printf "%s\n" \
 		"Would you like to create the datasets and snapshots nessacary to run the backup (only nessacary the first time)?" \
 		"(if you have already created the backupDatasets and the snapshot per backupDataset you can skip this)"
@@ -174,10 +151,12 @@ init(){
 		if ! ${path}/createBackupDS.bash
 		then
 			printf "${RED}Error:${NC} failure in creation of the datasets -> abort"
-			exit 1
+			return 1
 		fi
 	fi
+}
 
+reminder(){
 	printf "%s\n" \
 		"Would you like to get a reminder for backing up? (requires anacron)"
 	read -ep "[y]es/[N]o " resp 2>&1
@@ -185,8 +164,31 @@ init(){
 	then
 		printf "Each how many days do you want to be reminded?\n"
 		read -ep "days: " days 2>&1
+		if [[ ! ( "$days" =~ [1-9][0-9]* ) ]]
+		then
+			printf "${RED}Error:${NC} days has to be an integer\n"
+			return 1
+		fi
+		if [[ -f /etc/cron.daily/zfsBackupReminder ]]
+		then
+			printf "${RED}Error:${NC} '/etc/cron.daily/zfsBackupReminder' already exists\n"
+			return 1
+		fi
 		cat > /etc/cron.daily/zfsBackupReminder << EOF
 #!/bin/bash
+notify-send() { # to be able to use notify-send from root
+    #Detect the name of the display in use
+    local display=":\$(ls /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
+
+    #Detect the user using such display
+	local user="\$(ps aux | grep '/usr/lib/Xorg' | head -n1 | awk -F ' ' '{print \$1}')"
+
+    #Detect the id of the user
+    local uid=\$(id -u \$user)
+
+    sudo -u \$user DISPLAY=\$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$uid/bus notify-send "\$@"
+}
+
 lastBackupDone="\$(cat "${path}/backupDone.txt")"
 now="\$(date +%s)"
 daysAgo="\$(( (10#\$now - 10#\$lastBackupDone) / (60*60*24) ))"
@@ -199,7 +201,9 @@ then
 fi
 EOF
 	fi
+}
 
+periodicSnaps(){
 	printf "%s\n" \
 		"Would you like to setup periodic snapshotting? (requires anacron)"
 	read -ep "[y]es/[N]o " resp 2>&1
@@ -208,12 +212,64 @@ EOF
 		if ! ${path}/snapshots.bash "${arraySets[@]}"
 		then
 			printf "${RED}Error:${NC} failure in setting up periodic snapshotting -> abort"
-			exit 1
+			return 1
 		fi
+	fi
+}
+
+init(){
+	if [[ -f init ]]
+	then # already initialized
+		return
+	fi
+
+	if [[ ! -f ${path}/backup.cfg ]]
+	then
+		if ! collectWriteConfig
+		then
+			return 1
+		fi
+	fi
+
+	if ! createBackupDS
+	then
+		printf "%s\n" \
+			"Would you like to keep the config?"
+		read -ep "[y]es/[N]o " resp 2>&1
+		if [[ "$resp" == "n" || "$resp" == "N"  || "$resp" == "" ]]
+		then
+			rm ${path}/backup.cfg
+		fi
+		return 1
+	fi
+
+	if ! reminder
+	then
+		printf "%s\n" \
+			"Would you like to keep the config?"
+		read -ep "[Y]es/[n]o " resp 2>&1
+		if [[ "$resp" == "n" || "$resp" == "N" ]]
+		then
+			rm ${path}/backup.cfg
+		fi
+		return 1
+	fi
+
+	if ! periodicSnaps
+	then
+		printf "%s\n" \
+			"Would you like to keep the config?"
+		read -ep "[Y]es/[n]o " resp 2>&1
+		if [[ "$resp" == "n" || "$resp" == "N" ]]
+		then
+			rm ${path}/backup.cfg
+		fi
+		return 1
 	fi
 
 	printf "Initialisation finished, to rerun this assistant, delete ${path}/init\n"
 	touch "${path}init"
+	return 0
 }
 
 destroySnap(){
@@ -343,7 +399,7 @@ execFunc(){
 	printf "\n${BLUE}Destroy old Backup Snapshot${NC}\n"
 	
 	for processing in "${arraySets[@]}"
-	do :
+	do
 	  destroySnap "${backupPool}/${bakSet}/${processing#*/}@${poolSnapshot}"
 	done
 	
@@ -402,6 +458,33 @@ then
 	printf "%s\n" "This script has to be run as root (sudo)"
 	exit 1
 fi
+
+# note that init is not logged
+if ! init
+then
+	exit 1
+fi
+
+path="$(readlink -f "${0%/*}")" # collect the path from how the script was called and canonicalize the path
+#############################################LOAD-CONFIG##############################################################
+# global variables with respect to configuration are stored in the backup.cfg file
+if [[ -f ${path}/backup.cfg ]]
+then
+	source ${path}/backup.cfg
+fi
+
+if [[ ! (-v backupPool && -v poolSnapshot && -v arraySets) ]]
+then
+	printf "${RED}Error:${NC} "
+	printf "%s\n" \
+		"Global variables are missing, most probably some settings in the 'backup.cfg' are missing." \
+		"       See the 'backup.cfg.def' for an example." \
+		"       List of needed variables: backupPool, poolSnapshot, arraySets"
+	exit 2
+else
+	echo "Everything set"
+fi
+
 
 mv "${path}/backup.log.0" "${path}/backup.log.1"
 mv "${path}/backup.log" "${path}/backup.log.0"

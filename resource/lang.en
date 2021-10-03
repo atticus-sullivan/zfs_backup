@@ -1,0 +1,96 @@
+# nvim: set ft=bash
+
+# You can use the following variables (${varname}) to include color to the messages
+# done and error are by default colored green/red
+# ${GREEN}, ${RED}           foreground colors
+# ${BLUE}                    background color
+# ${NC}                      reset coloring
+
+# IMPORTANT: Make sure that lines marked as such include a %s in the string for the pool/dataset name!!!
+
+# TODO embedd this into the backup reminder (init and separate script)
+# TODO embedd this into the backupDS creation script
+# TODO embedd this into the snapshots script
+
+error="Error:"
+done="Done"
+success="Successful"
+fail_exists="already exists"
+
+continue="Enter: "
+confirm="Enter to continue: "
+
+exporting_anyway="Trying to export the pools anyway"
+exporting_failure="Pool %s couldn't be exported" # poolname
+
+dataset_not_found="dataset %s was not found" #dataset name
+
+importing="importing"
+
+# decision making
+Yes_no="[Y]es/[n]o"
+yes_No="[y]es/[N]o"
+declare -A yes ; yes[lower]=y ; yes[upper]=Y
+declare -A no ; no[lower]=n ; no[upper]=N
+
+check_config=( "Would you like to check your config, before continuing" "Attention: All devices needed for backupping have to be plugged in to be able to check the config" )
+
+# init
+init_intro="Do you want to initialize? (guided config creation)"
+
+init_backupPool="Name of the pool on which the backups shold be on: "
+init_backupDS=( "Names/Paths of the datasets that should be used for the backup" "e.g. 'bak1' 'bak2' -> one backup is on dataset 'bak1' and one is on 'bak2' -> the last backup is always available in addition to the current one" "Note the number of sets you specify here determines how many backups are left on the backupPool" "" "Give the names/paths line by line for each datasrt (simply press enter to finish entering new datasets" )
+init_backupDS_inter="Name/Path: "
+init_backupDS_confirm="Datasets used for backup: "
+
+init_replName="Name of the snapshot used for replication: "
+
+init_srcDS=( "Paths of the datasets that should be backed up" "Give the names/paths line by line for each dataset (simply press enter to finish entering new datasets)" )
+init_srcDS_inter="Name/Path: "
+init_srcDS_confirm="Datasets that are backed up: "
+
+init_createBacks=( "Would you like to create the datasets and snapshots necessary to run the backup (only necessary the first time)?" "(if you have already created the backupDatasets and the snapshot per backupDataset you can skip this)" )
+init_createBacks_fail="failure in creation of the datasets -> abort"
+
+init_back_rem="Would you like to get a reminder for backing up? (requires anacron (cron.hourly, ...))"
+init_back_rem_days_intro="After how many days do you want to be reminded?"
+init_back_rem_days="Days: "
+init_back_rem_days_fail="days has to be an integer"
+
+init_period_intro="Would you like to setup periodic snapshotting (requires anacron (cron.hourly, ...))"
+init_period_fail="failure in setting up periodic snapshotting -> abort"
+
+init_keep="Would you like to keep the config?"
+init_fin="Initialisation finished, to rerun this assistant delete %s" # "lock" file
+
+glob_fail=( "Global variables are missing, most probably some settings in the 'backup.cfg' are missing." "       See the 'backup.conf.def' for an example." "       List of needed variables: backupPool, poolSnapshot, arraySet" ) # DO NOT TRANSLATE these setting keys!!!
+glob_set="Everything set"
+
+root_fail="This script has to be run as root (sudo)"
+
+destroy_fail="Unable to destroy the old snapshot %s -> exit" # snapshot_path
+destroy_succ="at %s, destroyed %s" # date_and_time, snapshot_path
+
+create_fail="Snapshot for %s couldn't be created -> exit" # snapshot_path
+create_succ="at %s, created %s" # date_and_time, snapshot_path
+
+repl_intro="Replicate %s > %s\nDo ${RED}not${NC} interrupt this process!!!" # src, dst
+repl_fail="Replication of %s failed -> exit" # src
+repl_succ="at %s, %s > %s" # date_and_time, src, dst
+
+main_stat_fail=( " no valid value in stat.txt -> exit" "       This shouldn't have happened if you didn't modified the file" )
+main_backupset="BackupDataSet is \"%s\"" # backupSet_name
+
+main_import="Import Devices"
+main_import_fail="Unable to import the pool %s, make sure the device is connected and isn't already imported -> exit" # poolName
+main_import_succ="at %s" # date_and_time
+
+main_destroy="Destroy old backup snapshot"
+main_create="Create current snapshot to replicate"
+main_repl="Start replication"
+main_destroySrc="Destroy source snapshot: %s" # src snapshot
+main_export="Export the previously imported devices"
+main_export_fail="%s couldn't been exported" # pool
+main_export_succ="exporting %s at %s" # pool, date_and_time
+
+main_succ="All tasks are ${GREEN}successfully${NC} done at %s" # date_and_time

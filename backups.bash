@@ -5,27 +5,32 @@ RED='\033[0;31m'
 BLUE='\033[0;44m'
 NC='\033[0;0m'
 
+##########################################LANGUAGE####################################################################
+source /home/lukas/coding/zfs-bash/resource/lang.en
+printf "${main_succ}\n" "hi"
+exit 0
+##########################################LANGUAGE####################################################################
+
 ###########################################FUNCTIONS-START############################################################
 
 myExit(){
-  read -ep "enter: " -r muell 2>&1
+  read -ep "${continue}" -r muell 2>&1
 
-  echo -e "\n Trying to export the Pool anyway"
+  echo -e "\n ${exporting_anyway}"
   if ! zpool export "$backupPool"
   then
-    printf " ${RED}Error:${NC} Backup-device couldn't been exported \n"
+    printf " ${RED}${error}${NC} ${exporting_failure} \n" "backup" # TODO exoort all exportable not only the backuopool
   else
-    printf " ${GREEN}Successful${NC} \n"
+    printf " ${GREEN}${success}${NC} \n"
   fi
   exit
 }
 
 checkConfig(){
 	printf "%s\n" \
-		"Would you like to check your config, before continuing?" \
-		"Attention: All devices needed for backupping have to be plugged in to be able to check the config"
-	read -ep "[Y]es/[n]o " resp 2>&1
-	if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+		${check_config[@]}
+	read -ep "${Yes_no} " resp 2>&1
+	if [[ "$resp" == "${yes[upper]}" || "$resp" == "${yes[lower]}"  || "$resp" == "" ]]
 	then
 		readarray -t requiredPools <<<$(printf "%s\n" "${arraySets[@]}" | awk -F"/" '{print $1}' | sort -u)
 		requiredPools+=("${backupPool}")
@@ -40,7 +45,7 @@ checkConfig(){
 			fi
 			if ! zfs import "$pools"
 			then
-				printf "${RED}Error:${NC} importing $pool\n"
+				printf "${RED}${error}${NC} ${importing} $pool\n"
 				return 1
 			fi
 		done
@@ -49,7 +54,7 @@ checkConfig(){
 		do
 			if ! zfs list "$ds" &>/dev/null
 			then
-				printf "${RED}Error:${NC} dataset $ds was not found\n"
+				printf "${RED}${error}${NC} ${dataset_not_found}\n" "$ds"
 				return 1
 			fi
 		done
@@ -62,7 +67,7 @@ checkConfig(){
 			fi
 			if ! zfs export "$pools"
 			then
-				printf "${RED}Error:${NC} exporting $pool\n"
+				printf "${RED}${error}${NC} ${exporting_failure}\n" "$pool"
 				return 1
 			fi
 		done
@@ -70,53 +75,48 @@ checkConfig(){
 }
 
 collectWriteConfig(){
-	printf "Do you want to initialize? (guided config creation)\n"
-	read -ep "[Y]es/[n]o " resp 2>&1
-	if [[ "$resp" == "y" || "$resp" == "Y" || "$resp" == "" ]]
+	printf "${init_intro}\n"
+	read -ep "${Yes_no} " resp 2>&1
+	if [[ "$resp" == "${yes[lower]}" || "$resp" == "${yes[upper]}" || "$resp" == "" ]]
 	then
 		backupPool=""
 		printf "\n"
 		# TODO @Gala check ob pool existiert? Evtl nicht möglich, da nicht eingesteckt...
-		read -ep "Name of the pool on which the backups should be on: " backupPool 2>&1
+		read -ep "${init_backupPool}" backupPool 2>&1
 		printf "\n"
 
 		printf "%s\n" \
-			"Names/Paths of the datasets that should be used for the backup" \
-			"e.g. 'bak1' 'bak2' -> one backup is on dataset 'bak1' and one is on 'bak2' -> the last backup is always available in addition to the current one" \
-			"Note that the number of sets you specify here determines how many backups are left on the backupPool" \
-			"" \
-			"Give the names/paths line by line for each dataset (simply press enter to finish entering new datasets)"
+			${init_backupDS[@]}
 		backupDsNames=()
 		ds="x"
 		while [[ "$ds" != "" ]]
 		do
-			read -ep "Name/Path: " ds 2>&1
+			read -ep "${init_backupDS_inter}" ds 2>&1
 			[[ "$ds" == "" ]] && continue
 			backupDsNames+=("$ds")
 		done
-		printf "Datasets used for backup: "
+		printf "${init_backupDS_confirm}"
 		declare -p backupDsNames
-		read -ep "Enter to continue: " muell 2>&1
+		read -ep "${confirm}" muell 2>&1
 		printf "\n"
 
 		poolSnapshot=""
-		read -ep "Name of the snapshot used for replication: " poolSnapshot 2>&1 # TODO @Gala "replication" als default?
+		read -ep "${init_replName}" poolSnapshot 2>&1 # TODO @Gala "replication" als default?
 		printf "\n"
 
 		printf "%s\n" \
-			"Paths of the datasets that should be backed up" \
-			"Give the names/paths line by line for each dataset (simply press enter to finish entering new datasets)"
+			${init_srcDS[@]}
 		arraySets=()
 		ds="x"
 		while [[ "$ds" != "" ]]
 		do
-			read -ep "Name/Path: " ds 2>&1
+			read -ep "${init_srcDS_inter}" ds 2>&1
 			[[ "$ds" == "" ]] && continue
 			arraySets+=("$ds")
 		done
-		printf "Datasets that are backed up: "
+		printf "${init_srcDS_confirm}"
 		declare -p arraySets
-		read -ep "Enter to continue: " muell 2>&1
+		read -ep "${confirm}" muell 2>&1
 		printf "\n"
 
 		if ! checkConfig
@@ -124,6 +124,7 @@ collectWriteConfig(){
 			return 1
 		fi
 
+		# Attention do not translate these strings!!!
 		{
 			printf "%s\n" "backupPool=\"${backupPool}\""
 
@@ -143,35 +144,33 @@ collectWriteConfig(){
 
 createBackupDS(){
 	printf "%s\n" \
-		"Would you like to create the datasets and snapshots nessacary to run the backup (only nessacary the first time)?" \
-		"(if you have already created the backupDatasets and the snapshot per backupDataset you can skip this)"
-	read -ep "[Y]es/[n]o " resp 2>&1
-	if [[ "$resp" == "y" || "$resp" == "Y"  || "$resp" == "" ]]
+		${init_createBacks[@]}
+	read -ep "${Yes_no}" resp 2>&1
+	if [[ "$resp" == "${yes[lower]}" || "$resp" == "${yes[upper]}"  || "$resp" == "" ]]
 	then
 		if ! ${path}/createBackupDS.bash
 		then
-			printf "${RED}Error:${NC} failure in creation of the datasets -> abort"
+			printf "${RED}${error}${NC} ${init_createBacks_fail}\n"
 			return 1
 		fi
 	fi
 }
 
 reminder(){
-	printf "%s\n" \
-		"Would you like to get a reminder for backing up? (requires anacron)"
-	read -ep "[y]es/[N]o " resp 2>&1
-	if [[ "$resp" == "y" || "$resp" == "Y" ]]
+	printf "%s\n" "${init_back_rem}"
+	read -ep "${yes_No}" resp 2>&1
+	if [[ "$resp" == "${yes[lower]}" || "$resp" == "${yes[upper]}" ]]
 	then
-		printf "Each how many days do you want to be reminded?\n"
-		read -ep "days: " days 2>&1
+		printf "${init_back_rem_days_intro}\n"
+		read -ep "${init_back_rem_days}" days 2>&1
 		if [[ ! ( "$days" =~ [1-9][0-9]* ) ]]
 		then
-			printf "${RED}Error:${NC} days has to be an integer\n"
+			printf "${RED}${error}${NC} ${init_bacl_rem_days_fail}\n"
 			return 1
 		fi
 		if [[ -f /etc/cron.daily/zfsBackupReminder ]]
 		then
-			printf "${RED}Error:${NC} '/etc/cron.daily/zfsBackupReminder' already exists\n"
+			printf "${RED}${error}${NC} '/etc/cron.daily/zfsBackupReminder' ${fail_exists}\n"
 			return 1
 		fi
 		cat > /etc/cron.daily/zfsBackupReminder << EOF
@@ -204,14 +203,13 @@ EOF
 }
 
 periodicSnaps(){
-	printf "%s\n" \
-		"Would you like to setup periodic snapshotting? (requires anacron)"
-	read -ep "[y]es/[N]o " resp 2>&1
-	if [[ "$resp" == "y" || "$resp" == "Y" ]]
+	printf "%s\n" "${init_period_intro}"
+	read -ep "${yes_No}" resp 2>&1
+	if [[ "$resp" == "${yes[lower]}" || "$resp" == "${yes[upper]}" ]]
 	then
 		if ! ${path}/snapshots.bash "${arraySets[@]}"
 		then
-			printf "${RED}Error:${NC} failure in setting up periodic snapshotting -> abort"
+			printf "${RED}${error}${NC} ${init_period_fail}"
 			return 1
 		fi
 	fi
@@ -233,10 +231,9 @@ init(){
 
 	if ! createBackupDS
 	then
-		printf "%s\n" \
-			"Would you like to keep the config?"
-		read -ep "[y]es/[N]o " resp 2>&1
-		if [[ "$resp" == "n" || "$resp" == "N"  || "$resp" == "" ]]
+		printf "%s\n" "${init_keep}"
+		read -ep "${yes_No}" resp 2>&1
+		if [[ "$resp" == "${no[lower]}" || "$resp" == "${no[upper]}"  || "$resp" == "" ]]
 		then
 			rm ${path}/backup.cfg
 		fi
@@ -245,10 +242,9 @@ init(){
 
 	if ! reminder
 	then
-		printf "%s\n" \
-			"Would you like to keep the config?"
-		read -ep "[Y]es/[n]o " resp 2>&1
-		if [[ "$resp" == "n" || "$resp" == "N" ]]
+		printf "%s\n" "${init_keep}"
+		read -ep "${Yes_no}" resp 2>&1
+		if [[ "$resp" == "${no[lower]}" || "$resp" == "${no[upper]}" ]]
 		then
 			rm ${path}/backup.cfg
 		fi
@@ -257,17 +253,16 @@ init(){
 
 	if ! periodicSnaps
 	then
-		printf "%s\n" \
-			"Would you like to keep the config?"
-		read -ep "[Y]es/[n]o " resp 2>&1
-		if [[ "$resp" == "n" || "$resp" == "N" ]]
+		printf "%s\n" "${init_keep}"
+		read -ep "${Yes_no}" resp 2>&1
+		if [[ "$resp" == "${no[lower]}" || "$resp" == "${no[upper]}" ]]
 		then
 			rm ${path}/backup.cfg
 		fi
 		return 1
 	fi
 
-	printf "Initialisation finished, to rerun this assistant, delete ${path}/init\n"
+	printf "${init_fin}\n" "${path}/init"
 	touch "${path}init"
 	return 0
 }
@@ -275,34 +270,32 @@ init(){
 destroySnap(){
   if ! zfs destroy "$1"
   then
-    printf "${RED}Error:${NC} Unable to destroy the old Snapshot. -> exit \n"
+    printf "${RED}${error}${NC} ${destroy_fail}\n" "$1"
     myExit
   else
-    printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), destroyed $1\n"
+    printf "${GREEN}${done}${NC} ${destroy_succ}\n" "$(date "+%Y-%m-%d %T")" "$1"
   fi
 }
 
 createSnap(){
   if ! zfs snapshot "$1"
   then
-    printf "${RED}Error:${NC} Snapshot for $1 couldn't be created -> exit \n"
+    printf "${RED}${error}${NC} ${create_fail}\n" "$1"
     myExit
   else
-    printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), created $1\n"
+    printf "${GREEN}${done}${NC} ${create_succ}\n" "$(date "+%Y-%m-%d %T")" "$1"
   fi
 }
 
 replicateSnap(){
-	printf "Replicate $1 > $2\nDo ${RED}not${NC} interrupt this process!!!\n"
-
-	echo "To watch the progress run \"watch sudo zpool iostat\" in a extra terminal"
+	printf "${repl_intro}\n" "$1" "$2"
 
 	if ! zfs send "$1" | zfs recv "$2" -F
 	then
-		printf "${RED}Error:${NC} Replication \033[1;31mfailed${NC} -> exit\n"
+		printf "${RED}${error}${NC} ${repl_fail}" "$1"
 		myExit
 	else
-		printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T"), $1 > $2\n\n"
+		printf "${GREEN}${done}${NC} ${repl_succ}\n\n" "$(date "+%Y-%m-%d %T")" "$1" "$2"
 	fi
 }
 
@@ -325,17 +318,15 @@ execFunc(){
 	stat=$(cat ${path}/stat.txt)
 	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 && "$stat" -lt "${#backupDsNames[@]}" ) ]]
 	then
-		printf "${RED}Error:${NC}"
-		printf "%s\n" \
-			" no valid value for ${path}/stat.txt -> exit" \
-			"       This shouldn't have happened if you didn't modify the file" #TODO @Gala hint für unerfahrene user hier?
+		printf "${RED}${error}${NC}"
+		printf "%s\n" ${main_stat_fail[@]}
 		exit 1
 	fi
 	echo "$(( (stat + 1) % ${#backupDsNames[@]} ))" > ${path}/stat.txt
 	bakSet="${backupDsNames[stat]}"
-	
-	echo -e "BackupDataSet is \"$bakSet\""
-	read -ep "Press Enter to continue (ctrl+C to abort) " muell 2>&1
+
+	printf "$main_backupset" "$bakSet"
+	read -ep "$confirm" muell 2>&1
 	
 	# echo ${arraySets[*]%%/*} | tr " " "\n" | sort -u
 
@@ -345,7 +336,7 @@ execFunc(){
 	readarray -t zfsImported <<<$(zpool list | sed 's/  \+/\t/g' | awk -F $'\t' 'NR>1 {print $1}')
 
 	#import
-	printf "\n${BLUE}Import Devices${NC}\n"
+	printf "\n${BLUE}${main_import}${NC}\n"
 	for pool in "${requiredPools[@]}"
 	do
 		# don't import pools that are already imported
@@ -356,10 +347,10 @@ execFunc(){
 
 		if ! zpool import $pool
 		then
-			printf "${RED}Error:${NC} Unable to import the pool ($pool), make shure the device is connected and isn't imorted -> exit \n"
+			printf "${RED}${error}${NC} ${main_import_fail}\n" "$pool"
 			exit
 		else
-			printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T")\n\n"
+			printf "${GREEN}${done}${NC} ${main_import_succ}\n\n" "$(date "+%Y-%m-%d %T")"
 		fi
 	done
 	
@@ -389,14 +380,16 @@ execFunc(){
 	divisionForGb=1000000000
 	if [[ "$freeSpaceOnBackup" -lt "$needed" ]]
 	then
+		# TODO localize this one
 	  printf "${RED}Error:${NC} Too much data to backup, the targetPool($backupPool) is too full ($backupPool has $(( 10#${freeSpaceOnBackup} / 10#${divisionForGb} )),$(((10#${freeSpaceOnBackup}%10#${divisionForGb})*10/10#${divisionForGb} )) GB (exactly ${freeSpaceOnBackup} bytes) left but there is $(( 10#${needed} / 10#${divisionForGb} )),$(((10#${needed}%10#${divisionForGb})*10/10#${divisionForGb} )) GB (exactly ${needed} bytes) to be backedUp) -> exit\n"
 	  myExit
 	else
+		# TODO localize this one
 	  printf "${GREEN}Successful:${NC} Enough place on BackupPool ($backupPool has $(( 10#${freeSpaceOnBackup} / 10#${divisionForGb} )),$(((10#${freeSpaceOnBackup}%10#${divisionForGb})*10/10#${divisionForGb} )) GB ($freeSpaceOnBackup Bytes) left, there is $(( 10#${needed} / 10#${divisionForGb} )),$(((10#${needed}%10#${divisionForGb})*10/10#${divisionForGb} )) GB ($needed Bytes) to be backedUp)   \n"
 	fi
 	
 	#Destroy Old Backup Snapshot 
-	printf "\n${BLUE}Destroy old Backup Snapshot${NC}\n"
+	printf "\n${BLUE}${main_destroy}${NC}\n"
 	
 	for processing in "${arraySets[@]}"
 	do
@@ -404,14 +397,14 @@ execFunc(){
 	done
 	
 	#create snapshot
-	printf "\n${BLUE}Create current Snapshot to replicate${NC}\n"
+	printf "\n${BLUE}${main_create}${NC}\n"
 	for processing in "${arraySets[@]}"
 	do
 	  createSnap "${processing}@${poolSnapshot}"
 	done
 	
 	#Replication
-	printf "\n${BLUE}Start Replication${NC}\n"
+	printf "\n${BLUE}${main_repl}${NC}\n"
 	for processing in "${arraySets[@]}"
 	do
 	  echo -e "\n\n"
@@ -420,14 +413,14 @@ execFunc(){
 	done
 	
 	#Destroy source Snapshot
-	printf "${BLUE}Destroy Source Snapshot: ${backupPool}/${bakSet}@${poolSnapshot}${NC}\n"
+	printf "${BLUE}${main_destroySrc}${NC}\n" "${backupPool}/${bakSet}@${poolSnapshot}"
 	for processing in "${arraySets[@]}"
 	do
 	  destroySnap "${processing}@${poolSnapshot}"
 	done
 	
 	#export
-	printf "\n${BLUE}Export Backup device${NC}\n"
+	printf "\n${BLUE}${main_export}${NC}\n"
 	for pool in "${requiredPools[@]}"
 	do
 		# don't import pools that are already imported
@@ -438,14 +431,14 @@ execFunc(){
 
 		if ! zpool import $pool
 		then
-			printf "${RED}Error:${NC} $pool couldn't been exported \n"
+			printf "${RED}${error}${NC} ${main_export_fail}\n" "$pool"
 			exit 1
 		else
-			printf "${GREEN}Done${NC} at $(date "+%Y-%m-%d %T")\n\n"
+			printf "${GREEN}${done}${NC} ${main_export_fail}\n\n" "$pool" "$(date "+%Y-%m-%d %T")"
 		fi
 	done
 
-	printf "\nAll Tasks are ${GREEN}successfully${NC} done at $(date "+%Y-%m-%d %T")\n"
+	printf "\n${main_succ}\n" "$(date "+%Y-%m-%d %T")"
 	
 	date +%s > ${path}/backupDone.txt #To remember when the last Backup took place (for the reminder to do Backups)
 	###########################################EXECUTE-SCRIPT-END######################################################
@@ -455,7 +448,7 @@ execFunc(){
 # check if started with sudo
 if [[ "$EUID" -ne 0 ]]
 then
-	printf "%s\n" "This script has to be run as root (sudo)"
+	printf "%s\n" "${root_fail}"
 	exit 1
 fi
 
@@ -475,14 +468,12 @@ fi
 
 if [[ ! (-v backupPool && -v poolSnapshot && -v arraySets) ]]
 then
-	printf "${RED}Error:${NC} "
+	printf "${RED}${error}${NC} "
 	printf "%s\n" \
-		"Global variables are missing, most probably some settings in the 'backup.cfg' are missing." \
-		"       See the 'backup.cfg.def' for an example." \
-		"       List of needed variables: backupPool, poolSnapshot, arraySets"
+		${glob_fail[@]}
 	exit 2
 else
-	echo "Everything set"
+	printf "${glob_set}\n"
 fi
 
 

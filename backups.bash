@@ -7,8 +7,6 @@ NC='\033[0;0m'
 
 ##########################################LANGUAGE####################################################################
 source /home/lukas/coding/zfs-bash/resource/lang.en
-printf "${main_succ}\n" "hi"
-exit 0
 ##########################################LANGUAGE####################################################################
 
 ###########################################FUNCTIONS-START############################################################
@@ -28,7 +26,7 @@ myExit(){
 
 checkConfig(){
 	printf "%s\n" \
-		${check_config[@]}
+		"${check_config[@]}"
 	read -ep "${Yes_no} " resp 2>&1
 	if [[ "$resp" == "${yes[upper]}" || "$resp" == "${yes[lower]}"  || "$resp" == "" ]]
 	then
@@ -86,7 +84,7 @@ collectWriteConfig(){
 		printf "\n"
 
 		printf "%s\n" \
-			${init_backupDS[@]}
+			"${init_backupDS[@]}"
 		backupDsNames=()
 		ds="x"
 		while [[ "$ds" != "" ]]
@@ -105,7 +103,7 @@ collectWriteConfig(){
 		printf "\n"
 
 		printf "%s\n" \
-			${init_srcDS[@]}
+			"${init_srcDS[@]}"
 		arraySets=()
 		ds="x"
 		while [[ "$ds" != "" ]]
@@ -144,7 +142,7 @@ collectWriteConfig(){
 
 createBackupDS(){
 	printf "%s\n" \
-		${init_createBacks[@]}
+		"${init_createBacks[@]}"
 	read -ep "${Yes_no}" resp 2>&1
 	if [[ "$resp" == "${yes[lower]}" || "$resp" == "${yes[upper]}"  || "$resp" == "" ]]
 	then
@@ -319,7 +317,7 @@ execFunc(){
 	if [[ ! ( "$stat" =~ ^[0-9]+$  && "$stat" -ge 0 && "$stat" -lt "${#backupDsNames[@]}" ) ]]
 	then
 		printf "${RED}${error}${NC}"
-		printf "%s\n" ${main_stat_fail[@]}
+		printf "%s\n" "${main_stat_fail[@]}"
 		exit 1
 	fi
 	echo "$(( (stat + 1) % ${#backupDsNames[@]} ))" > ${path}/stat.txt

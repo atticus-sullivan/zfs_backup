@@ -1,4 +1,4 @@
-# nvim: set ft=bash
+# vim: ft=bash
 
 # You can use the following variables (${varname}) to include color to the messages
 # done and error are by default colored green/red
@@ -79,7 +79,7 @@ repl_fail="Replication of %s failed -> exit" # src
 repl_succ="at %s, %s > %s" # date_and_time, src, dst
 
 main_stat_fail=( " no valid value in stat.txt -> exit" "       This shouldn't have happened if you didn't modified the file" )
-main_backupset="BackupDataSet is \"%s\"" # backupSet_name
+main_backupset="BackupDataSet is \"%s\"\n" # backupSet_name
 
 main_import="Import Devices"
 main_import_fail="Unable to import the pool %s, make sure the device is connected and isn't already imported -> exit" # poolName

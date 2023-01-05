@@ -5,12 +5,13 @@
 ###########
 # - [ ] use an extra layer to wrap zfs commands => e.g zfs_destroy or
 #         zfs_/zpool_exists for better reuse and less code-duplication
-# - [ ] interactive stuff
+# - [ ] interactive stuff (by default this should be interactive, but provide a switch to make "scriptable")
 # - [ ] interactive config creation
 # - [ ] help function
 # - [ ] check space
 # - [ ] write EXIT_ENC and EXIT_IMPORT to file/read from file so that the user can change what is exported/encrypted at the end if necessary
 # - [ ] reminder stuff
+# - [ ] init function to create datasets and snapshots the first time (print warnings if already exists) to get a consistant state to run this script on
 
 #################
 ## CONVENTIONS ##

@@ -3,15 +3,12 @@
 ###########
 ## TODOs ##
 ###########
-# - [-] use an extra layer to wrap zfs commands => e.g zfs_destroy or
-#         zfs_/zpool_exists for better reuse and less code-duplication
-# - [-] interactive stuff (by default this should be interactive, but provide a switch to make "scriptable")
-# - [-] interactive config creation
-# - [-] help function
-# - [-] check space
-# - [-] write EXIT_ENC and EXIT_IMPORT to file/read from file so that the user can change what is exported/encrypted at the end if necessary
+# nice to have:
+# - [ ] interactive config creation
+# - [ ] init function to create datasets and snapshots the first time (print
+# warnings if already exists) to get a consistent state to run this script on
+# - [ ] check space -> lua
 # - [ ] reminder stuff
-# - [ ] init function to create datasets and snapshots the first time (print warnings if already exists) to get a consistant state to run this script on
 
 #################
 ## CONVENTIONS ##
@@ -29,7 +26,8 @@
 ## GLOBAL STUFF ##
 ##################
 # get the directory of the script in a canonicalized way
-DIR="$(readlink -f "${0%/*}")"
+DIR="$(dirname "$(readlink -f "${0}")")"
+INTERACTIVE=false
 
 # COLORS
 GREEN='\033[0;32m' # success
@@ -91,10 +89,77 @@ exit_stack()
 ##########
 ## HELP ##
 ##########
-# TODO implement help_fun
 help_fun()
 {
+	cat >&2 <<EOF
+Usage: $(basename "$0") [-i]
+
+Create backup snapshot and send it to a backup pool.
+
+  -i <INTERACTIVE>    be interactive (yes/true) or not (no/false) (default: yes)
+  -h                  show this help
+
+Config:
+The config will be read from the backup.cfg placed alongside this script (currently
+"${DIR}"). It has to be readable via 'source' by the bash and contain the
+following variables:
+
+- ARRAY_SET:          names of the datasets to be backed up. This script will
+                      auto-detect which of those datasets is encrypted
+                      (array of strings)
+
+- BACKUP_POOL:        name of the pool to send the backup snapshot to
+                      (simple string)
+
+- SNAPSHOT_NAME:      name of the snapshot used for the backup (which is being
+                      sent to BACKUP_POOL)
+
+- BACKUP_DS_NAMES:    usually you want to have not only one backup but keep e.g.
+                      the last backup as well. Set here the names of the
+                      datasets holding the actual backups (e.g. bak1, bak2).
+                      This script will rotate on which dataset to place the
+                      backup on.
+
+EOF
 	return 0
+}
+
+###################
+## PARSE_OPTIONS ##
+###################
+# Parameters:
+# $@: options to parse
+# Sets the following global variables:
+# - INTERACTIVE (if passed)
+# Returns 0 if successful, 1 on help and other on error
+parse_options(){
+	local OPTION
+	local OPTARG
+	while getopts ':i:h' OPTION ; do
+		case "${OPTION}" in
+			i)
+				if [[ "${OPTARG,,}" == "yes" || "${OPTARG,,}" == "true" ]] ; then
+					INTERACTIVE=true
+				elif [[ "${OPTARG,,}" == "no" || "${OPTARG,,}" == "false" ]] ; then
+					INTERACTIVE=false
+				else
+					echo "'-i' has to be either yes/true or no/false" >&2
+					return -1
+				fi
+				;;
+			h)
+				help_fun
+				return 1
+				;;
+			:)
+				echo "Error: -${OPTARG} expects an argument" >&2
+				return -1
+				;;
+			?)
+				echo "Error: Unknown argument passed: ${OPTARG}" >&2
+				;;
+		esac
+	done
 }
 
 ##################
@@ -214,7 +279,9 @@ config_user_process()
 	BAK_SET="${BACKUP_DS_NAMES[stat]}"
 
 	printf "${LANG_BACKUP_SET_FMT}" "${BAK_SET}"
-	read -ep "${LANG_CONFIRM}" muell 2>&1 # TODO interactive
+	if [[ "${INTERACTIVE}" == true ]] ; then
+		read -ep "${LANG_CONFIRM}" resp 2>&1
+	fi
 
 	return 0
 }
@@ -308,7 +375,7 @@ replicate()
 {
 	for s in "${ARRAY_SET[@]}"
 	do
-		echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
+		# echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
 
 		printf "${BLUE}%b${NC} %s -> %s:" "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}"
 		if zfs send "${s}@${SNAPSHOT_NAME}" | zfs recv "${BACKUP_POOL}/${BAK_SET}/${s#*/}" -F
@@ -418,6 +485,9 @@ then
 	printf "%b\n" "${LANG_ROOT_ERROR}"
 	exit 1
 fi
+
+# parse passed options
+parse_options "$@"
 
 mv "${DIR}/backup.log.0" "${DIR}/backup.log.1"
 mv "${DIR}/backup.log" "${DIR}/backup.log.0"

@@ -61,25 +61,25 @@ exit_stack()
 {
 	local ret=0
 	if [[ "${1}" != "normal" ]] ; then
-		printf "${WARN}%b${NC} %b\n" "${LANG_WARNING}" ${LANG_EXIT_WARNING}
+		printf "${WARN}%b${NC} %b\n" "${LANG_WARNING}" ${LANG_EXIT_WARNING} >&2
 	fi
 
 	# no matter what error, we at least try to cleanup the rest of the stack
 
 	for s in "${EXIT_ENC[@]}" ; do
-		printf "${BLUE}%b${NC} %s:" "${LANG_ENCRYPTING}" "${s}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_ENCRYPTING}" "${s}" >&2
 		if zfs unmount "${s}" && zfs unload-key "${s}" ; then
 		else
-			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_ENCRYPT_ERROR}
+			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_ENCRYPT_ERROR} >&2
 			ret=-1
 		fi
 	done
 
 	for p in "${EXIT_IMPORT[@]}" ; do
-		printf "${BLUE}%b${NC} %s:" "${LANG_EXPORTING}" "${s}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_EXPORTING}" "${s}" >&2
 		if zpool export "${s}" ; then
 		else
-			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_EXPORT_ERROR}
+			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_EXPORT_ERROR} >&2
 			ret=-1
 		fi
 	done
@@ -183,31 +183,31 @@ config_user_read()
 config_user_check()
 {
 	if [[ -n "${BACKUP_POOL}" ]] ; then
-		printf "${RED}%b${NC} " "${LANG_ERROR}"
-		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_POOL"
+		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_POOL" >&2
 		return 1
 	fi
 	if [[ -n "${BACKUP_DS_NAMES}" ]] ; then
-		printf "${RED}%b${NC} " "${LANG_ERROR}"
-		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_DS_NAMES"
+		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_DS_NAMES" >&2
 		return 2
 	fi
 	if [[ -n "${SNAPSHOT_NAME}" ]] ; then
-		printf "${RED}%b${NC} " "${LANG_ERROR}"
-		printf "${LANG_CONFIG_MISSING_FMT}\n" "SNAPSHOT_NAME"
+		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+		printf "${LANG_CONFIG_MISSING_FMT}\n" "SNAPSHOT_NAME" >&2
 		return 3
 	fi
 	if [[ -n "${ARRAY_SET}" ]] ; then
-		printf "${RED}%b${NC} " "${LANG_ERROR}"
-		printf "${LANG_CONFIG_MISSING_FMT}\n" "ARRAY_SET"
+		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+		printf "${LANG_CONFIG_MISSING_FMT}\n" "ARRAY_SET" >&2
 		return 4
 	fi
 
 	# check for source datasets
 	for s in "${ARRAY_SET[@]}" ; do
 		if ! zfs list -H "${s}" > /dev/null ; then
-			printf "${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_CONFIG_SET_UNAVAILABLE_FMT}\n" "${s}"
+			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_CONFIG_SET_UNAVAILABLE_FMT}\n" "${s}" >&2
 			return 5
 		fi
 	done
@@ -215,15 +215,15 @@ config_user_check()
 	# check for dst datasets
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
 		if ! zfs list -H "${BACKUP_POOL}/${b}" > /dev/null ; then
-			printf "${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}"
+			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}" >&2
 			return 6
 		fi
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${#*/}" # remove pool from set path
 			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}" > /dev/null ; then
-				printf "${RED}%b${NC} " "${LANG_ERROR}"
-				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}"
+				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}" >&2
 				return 6
 			fi
 		done
@@ -234,8 +234,8 @@ config_user_check()
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${#*/}" # remove pool from set path
 			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
-				printf "${RED}%b${NC} " "${LANG_ERROR}"
-				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}"
+				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" >&2
 				return 7
 			fi
 		done
@@ -243,8 +243,8 @@ config_user_check()
 
 	for s in "${ARRAY_SET[@]}" ; do
 		if zfs list -H "${s}@${SNAPSHOT_NAME}" > /dev/null ; then
-			printf "${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_CONFIG_SNAPSHOT_EXISTS_FMT}\n" "${s}@${SNAPSHOT_NAME}"
+			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_CONFIG_SNAPSHOT_EXISTS_FMT}\n" "${s}@${SNAPSHOT_NAME}" >&2
 			return 8
 		fi
 	done
@@ -272,13 +272,13 @@ config_user_process()
 	echo "${stat}"
 	if [[ ! ( "${stat}" =~ ^[0-9]+$  && "${stat}" -ge 0 && "${stat}" -lt "${#BACKUP_DS_NAMES[@]}" ) ]]
 	then
-		printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" "${LANG_STAT_FAIL}"
+		printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" "${LANG_STAT_FAIL}" >&2
 		return 1
 	fi
 	echo "$(( (stat + 1) % ${#BACKUP_DS_NAMES[@]} ))" > ${DIR}/stat.txt
 	BAK_SET="${BACKUP_DS_NAMES[stat]}"
 
-	printf "${LANG_BACKUP_SET_FMT}" "${BAK_SET}"
+	printf "${LANG_BACKUP_SET_FMT}" "${BAK_SET}" >&2
 	if [[ "${INTERACTIVE}" == true ]] ; then
 		read -ep "${LANG_CONFIRM}" resp 2>&1
 	fi
@@ -296,14 +296,14 @@ config_user_process()
 import()
 {
 	for p in "${IMPORT_POOLS[@]}" ; do
-		printf "${BLUE}%b${NC} %s:" "${LANG_IMPORTING}" "${p}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_IMPORTING}" "${p}" >&2
 		if zpool import "${p}" > /dev/null ; then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 			# prepend for a stack like cleanup
 			EXIT_IMPORT=("${p}" "${EXIT_IMPORT[@]}")
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_IMPORT_ERROR_FMT}\n" "${p}"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_IMPORT_ERROR_FMT}\n" "${p}" >&2
 			return 1
 		fi
 	done
@@ -315,14 +315,14 @@ import()
 decrypt()
 {
 	for p in "${ENCRYPTED_SETS[@]}" ; do
-		printf "${BLUE}%b${NC} %s:" "${LANG_DECRYPTING}" "${p}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_DECRYPTING}" "${p}" >&2
 		if zpool mount -l "${p}" > /dev/null ; then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 			# prepend for a stack like cleanup
 			EXIT_ENC=("${p}" "${EXIT_ENC[@]}")
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_DECRYPT_ERROR_FMT}\n"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_DECRYPT_ERROR_FMT}\n" >&2
 			return 1
 		fi
 	done
@@ -341,12 +341,12 @@ destroy_dst()
 	for s in "${ARRAY_SET[@]}"
 	do
 		s="${#*/}" # remove pool from set path
-		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_DESTROY_ERROR_FMT}\n" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_DESTROY_ERROR_FMT}\n" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" >&2
 			return 1
 		fi
 	done
@@ -358,12 +358,12 @@ create_src()
 {
 	for s in "${ARRAY_SET[@]}"
 	do
-		printf "${BLUE}%b${NC} %s:" "${LANG_CREATING}" "${s}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_CREATING}" "${s}" >&2
 		if zfs snapshot "${s}@${SNAPSHOT_NAME}" ; then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_CREATE_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_CREATE_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}" >&2
 			return 1
 		fi
 	done
@@ -377,13 +377,13 @@ replicate()
 	do
 		# echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
 
-		printf "${BLUE}%b${NC} %s -> %s:" "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}"
+		printf "${BLUE}%b${NC} %s -> %s:" "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
 		if zfs send "${s}@${SNAPSHOT_NAME}" | zfs recv "${BACKUP_POOL}/${BAK_SET}/${s#*/}" -F
 		then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_REPLICATE_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_REPLICATE_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
 			return 1
 		fi
 	done
@@ -396,12 +396,12 @@ destroy_src()
 	#Destroy source Snapshot
 	for s in "${ARRAY_SET[@]}"
 	do
-		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${s}@${SNAPSHOT_NAME}"
+		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${s}@${SNAPSHOT_NAME}" > /dev/null ; then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}"
+			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
-			printf "\n${RED}%b${NC} " "${LANG_ERROR}"
-			printf "${LANG_DESTROY_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}"
+			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
+			printf "${LANG_DESTROY_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}" >&2
 			return 1
 		fi
 	done
@@ -470,10 +470,10 @@ main_replicate()
 	echo
 
 	if exit_stack "normal" ; then
-		printf "${GREEN}${LANG_DONE_SUCC_FMT}${NC}" "$(date "+%Y-%m-%d %T")"
+		printf "${GREEN}${LANG_DONE_SUCC_FMT}${NC}" "$(date "+%Y-%m-%d %T")" >&2
 		exit 0
 	else
-		printf "${RED}${LANG_DONE_ERROR_FMT}${NC}" "$(date "+%Y-%m-%d %T")"
+		printf "${RED}${LANG_DONE_ERROR_FMT}${NC}" "$(date "+%Y-%m-%d %T")" >&2
 		exit -1
 	fi
 	# UNREACHABLE
@@ -482,7 +482,7 @@ main_replicate()
 # check if started with sudo
 if [[ "${EUID}" -ne 0 ]]
 then
-	printf "%b\n" "${LANG_ROOT_ERROR}"
+	printf "%b\n" "${LANG_ROOT_ERROR}" >&2
 	exit 1
 fi
 
@@ -492,4 +492,4 @@ parse_options "$@"
 mv "${DIR}/backup.log.0" "${DIR}/backup.log.1"
 mv "${DIR}/backup.log" "${DIR}/backup.log.0"
 
-main_replicate | tee ${DIR}/backup.log
+main_replicate 2>&1 | tee ${DIR}/backup.log

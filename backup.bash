@@ -455,7 +455,7 @@ main_replicate()
 	fi
 	echo
 
-	if ! create ; then
+	if ! create_src ; then
 		exit_stack
 		exit -9
 	fi

@@ -8,8 +8,6 @@ shopt -s extglob
 # - [ ] maybe: revise error handling -> like for NC with traps etc
 # nice to have:
 # - [ ] interactive config creation
-# - [ ] init function to create datasets and snapshots the first time (print
-# warnings if already exists) to get a consistent state to run this script on
 # - [ ] check space -> lua
 # - [ ] reminder stuff
 
@@ -105,6 +103,7 @@ Usage: $(basename "$0") [-i]
 Create backup snapshot and send it to a backup pool.
 
   -i <INTERACTIVE>    be interactive (yes/true) or not (no/false) (default: yes)
+  -n                  new -- create datasets+snapshots initially needed
   -h                  show this help
 
 Config:
@@ -144,7 +143,7 @@ EOF
 parse_options(){
 	local OPTION
 	local OPTARG
-	while getopts ':i:h' OPTION ; do
+	while getopts ':i:nh' OPTION ; do
 		case "${OPTION}" in
 			i)
 				if [[ "${OPTARG,,}" == "yes" || "${OPTARG,,}" == "true" ]] ; then
@@ -155,6 +154,10 @@ parse_options(){
 					echo "'-i' has to be either yes/true or no/false" >&2
 					return -1
 				fi
+				;;
+			n)
+				bak_ds_init
+				return
 				;;
 			h)
 				help_fun
@@ -366,7 +369,7 @@ check_zfs_avail()
 	fi
 }
 
-# TODO
+# create necessary data-sets and snapshots for running this script
 # trailing emptyline: IF_OUTPUT
 bak_ds_init()
 {
@@ -377,13 +380,17 @@ bak_ds_init()
 				# DS does not exist
 				printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${BACKUP_POOL}/${bak}/${ds}" >&2
 				out_line=true
-				zfs create "${BACKUP_POOL}/${bak}/${ds}"
+				if ! zfs create "${BACKUP_POOL}/${bak}/${ds}" ; then
+					return -1
+				fi
 			fi
 			if !check_zfs_avail "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}" ; then
 				# snapshot does not exist
 				printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}" >&2
 				out_line=true
-				zfs create "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}"
+				if ! zfs create "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}" ; then
+					return -1
+				fi
 			fi
 		done
 	done
@@ -603,7 +610,7 @@ then
 fi
 
 # parse passed options
-parse_options "$@"
+parse_options "$@" || exit $?
 
 mv "${DIR}/backup.log.0" "${DIR}/backup.log.1"
 mv "${DIR}/backup.log" "${DIR}/backup.log.0"

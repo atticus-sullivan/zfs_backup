@@ -207,7 +207,7 @@ config_user_check()
 
 	# check for source datasets
 	for s in "${ARRAY_SET[@]}" ; do
-		if ! zfs list -H "${s}" > /dev/null ; then
+		if ! zfs list -H "${s}" &> /dev/null ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_SET_UNAVAILABLE_FMT}\n" "${s}" >&2
 			return 5
@@ -216,14 +216,14 @@ config_user_check()
 
 	# check for dst datasets
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
-		if ! zfs list -H "${BACKUP_POOL}/${b}" > /dev/null ; then
+		if ! zfs list -H "${BACKUP_POOL}/${b}" &> /dev/null ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}" >&2
 			return 6
 		fi
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${s#*/}" # remove pool from set path
-			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}" > /dev/null ; then
+			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}" &> /dev/null ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}" >&2
 				return 6
@@ -235,7 +235,7 @@ config_user_check()
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${s#*/}" # remove pool from set path
-			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
+			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" &> /dev/null ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" >&2
 				return 7
@@ -244,7 +244,7 @@ config_user_check()
 	done
 
 	for s in "${ARRAY_SET[@]}" ; do
-		if zfs list -H "${s}@${SNAPSHOT_NAME}" > /dev/null ; then
+		if zfs list -H "${s}@${SNAPSHOT_NAME}" &> /dev/null ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_SNAPSHOT_EXISTS_FMT}\n" "${s}@${SNAPSHOT_NAME}" >&2
 			return 8

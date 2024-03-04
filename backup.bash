@@ -260,7 +260,9 @@ config_user_check()
 config_user_process()
 {
 	readarray -t IMPORT_POOLS < <(for s in "${ARRAY_SET[@]}" ; do
-		echo "${s%%/*}"
+		if ! zfs list "${s%%/*}" &>/dev/null ; then
+			echo "${s%%/*}"
+		fi
 	done | sort -u)
 
 	readarray -t ENCRYPTED_SETS < <(for s in "${ARRAY_SET[@]}" ; do

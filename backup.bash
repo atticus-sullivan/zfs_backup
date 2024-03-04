@@ -17,6 +17,7 @@
 # functions are allowed to exit (0 on success) only if they are named main_
 # functions shall never exit otherwise
 # functions shall print error messages, but for general cleanup EXIT_STACK is to be used
+# functions shall define in a comment above wether they print a "trailing emptyline" [NO YES IF_OUTPUT (errors not counted)]
 # global variables are written in CAPS_LOCK
 # names with _ instread of camelCase
 # localization: variables begin with LANG_
@@ -50,6 +51,7 @@ source "${DIR}/resource/lang.en"
 ################
 ## EXIT STUFF ##
 ################
+# trailing emptyline: NO
 # cleans up according to the EXIT_STACK (make one EXIT_STACK per operation)
 # makes use of global variables indicating clean-up
 # currently these are
@@ -91,6 +93,7 @@ exit_stack()
 ##########
 ## HELP ##
 ##########
+# trailing emptyline: NO
 help_fun()
 {
 	cat >&2 <<EOF
@@ -129,6 +132,7 @@ EOF
 ###################
 ## PARSE_OPTIONS ##
 ###################
+# trailing emptyline: NO (no output)
 # Parameters:
 # $@: options to parse
 # Sets the following global variables:
@@ -171,6 +175,7 @@ parse_options(){
 # sets up gloabl user config variables
 # currently these are
 # BACKUP_POOL, BACKUP_DS_NAMES, SNAPSHOT_NAME and ARRAY_SET
+# trailing emptyline: NO (no output)
 config_user_read()
 {
 	# TODO prompt the user to write config file if is interactive
@@ -182,6 +187,7 @@ config_user_read()
 }
 
 # checks if all user config is ok
+# trailing emptyline: NO (no output)
 config_user_check()
 {
 	if [[ -z "${BACKUP_POOL}" ]] ; then
@@ -257,6 +263,7 @@ config_user_check()
 # sets up global "config" variables that are derived from the user provided config
 # currently these are
 # BAK_SET, IMPORT_POOLS and ENCRYPTED_SETS
+# trailing emptyline: YES
 config_user_process()
 {
 	readarray -t IMPORT_POOLS < <(for s in "${ARRAY_SET[@]}" ; do
@@ -285,6 +292,7 @@ config_user_process()
 	if [[ "${INTERACTIVE}" == true ]] ; then
 		read -ep "${LANG_CONFIRM}" resp 2>&1
 	fi
+	echo
 
 	return 0
 }
@@ -296,9 +304,12 @@ config_user_process()
 
 # import pools from IMPORT_POOLS and
 # push them to EXIT_IMPORT if succsessful
+# trailing emptyline: IF_OUTPUT
 import()
 {
+	local out_line=false
 	for p in "${IMPORT_POOLS[@]}" ; do
+		out_line=true
 		printf "${BLUE}%b${NC} %s:" "${LANG_IMPORTING}" "${p}" >&2
 		if zpool import "${p}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -310,14 +321,18 @@ import()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
 # mount/decrypt all sets from ENCRYPTED_SETS
 # and push them to EXIT_ENC if succsessful
+# trailing emptyline: IF_OUTPUT
 decrypt()
 {
+	local out_line=false
 	for p in "${ENCRYPTED_SETS[@]}" ; do
+		out_line=true
 		printf "${BLUE}%b${NC} %s: " "${LANG_DECRYPTING}" "${p}" >&2
 		if zfs mount -l "${p}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -329,6 +344,7 @@ decrypt()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
@@ -339,11 +355,14 @@ check_space()
 }
 
 # destroy dst snapshots on the backup pool
+# trailing emptyline: IF_OUTPUT
 destroy_dst()
 {
+	local out_line=false
 	for s in "${ARRAY_SET[@]}"
 	do
 		s="${s#*/}" # remove pool from set path
+		out_line=true
 		printf "${BLUE}%b${NC} %s: " "${LANG_DESTROYING}" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -353,14 +372,18 @@ destroy_dst()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
 # create src snapshots
+# trailing emptyline: IF_OUTPUT
 create_src()
 {
+	local out_line=false
 	for s in "${ARRAY_SET[@]}"
 	do
+		out_line=true
 		printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${s}" >&2
 		if zfs snapshot "${s}@${SNAPSHOT_NAME}" ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -370,16 +393,19 @@ create_src()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
 # send snapshots to BACKUP_POOL
+# trailing emptyline: IF_OUTPUT
 replicate()
 {
+	local out_line=false
 	for s in "${ARRAY_SET[@]}"
 	do
 		# echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
-
+		out_line=true
 		printf "${BLUE}%b${NC} %s -> %s: " "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
 		if zfs send "${s}@${SNAPSHOT_NAME}" | zfs recv "${BACKUP_POOL}/${BAK_SET}/${s#*/}" -F
 		then
@@ -390,15 +416,19 @@ replicate()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
 # destroy the snapshot what was just being sent
+# trailing emptyline: IF_OUTPUT
 destroy_src()
 {
+	local out_line=false
 	#Destroy source Snapshot
 	for s in "${ARRAY_SET[@]}"
 	do
+		out_line=true
 		printf "${BLUE}%b${NC} %s: " "${LANG_DESTROYING}" "${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${s}@${SNAPSHOT_NAME}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -408,6 +438,7 @@ destroy_src()
 			return 1
 		fi
 	done
+	[[ "${out_line}" == true ]] && echo
 	return 0
 }
 
@@ -422,13 +453,11 @@ main_replicate()
 		exit_stack
 		exit -5
 	fi
-	echo
 
 	if ! import ; then
 		exit_stack
 		exit -3
 	fi
-	echo
 
 	if ! config_user_check ; then
 		exit_stack
@@ -439,37 +468,31 @@ main_replicate()
 		exit_stack
 		exit -6
 	fi
-	echo
 
 	if ! check_space ; then
 		exit_stack
 		exit -7
 	fi
-	# echo
 
 	if ! destroy_dst ; then
 		exit_stack
 		exit -8
 	fi
-	echo
 
 	if ! create_src ; then
 		exit_stack
 		exit -9
 	fi
-	echo
 
 	if ! replicate ; then
 		exit_stack
 		exit -10
 	fi
-	echo
 
 	if ! destroy_src ; then
 		exit_stack
 		exit -10
 	fi
-	echo
 
 	if exit_stack "normal" ; then
 		printf "${GREEN}${LANG_DONE_SUCC_FMT}${NC}" "$(date "+%Y-%m-%d %T")" >&2

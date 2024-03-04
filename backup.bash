@@ -274,7 +274,8 @@ config_user_process()
 
 	readarray -t ENCRYPTED_SETS < <(for s in "${ARRAY_SET[@]}" ; do
 		local enc="$(zfs list -Ho name,encryption,keystatus "${s}" | cut -f 2)"
-		if [[ "${enc}" != "off" ]] ; then
+		local mnt="$(zfs list -Ho name,mounted "${s}" | cut -f 2)"
+		if [[ "${enc}" != "off" && "${mnt}" != "yes" ]] ; then
 			echo "${s}"
 		fi
 	done | sort -u)

@@ -1,0 +1,40 @@
+# vim: ft=bash
+
+# general purpose stuff
+LANG_CONFIRM="Enter to continue: "
+LANG_ERROR="ERROR:"
+LANG_SUCCESS="SUCCESS"
+LANG_DONE_ERROR_FMT="Done with ERROR  at %s"
+LANG_DONE_SUCC_FMT="SUCCESSfully done at %s"
+LANG_WARNING="WARNING:"
+
+# miscellaneous
+LANG_ROOT_ERROR="This script needs to be run as root."
+LANG_STAT_FAIL="Failed to read the 'stat.txt' file."
+LANG_EXIT_WARNING="At some point this script failed. Now we're trying to\n${BOLD}encrypt/unload${NC} all datasets which were encrypted/unloaded before running this script and\n${BOLD}export${NC} all pools that were exported before running this script.\nThere is ${BOLD}no attempt to create/destroy datasets/snapshots${NC} which were already created/destroyed.\nThus it may not be possible to simply run this script once again afterwards. Take your time and\nexamine what went wrong, how to prevent it the next time and check what has to be done to get a\n${BOLD}consistant state before rerunning this script${NC}."
+
+# config
+LANG_CONFIG_MISSING_FMT="Configuration of '%s' is missing.\nProvide either via env-variable or config file."
+LANG_CONFIG_BAKSET_UNAVAILABLE_FMT="Backup dataset '%s' is missing.\nEither remove it from the config or create it."
+LANG_CONFIG_SET_UNAVAILABLE_FMT="Dataset '%s' which is to be backed-up is unavailable.\nEither remove it from the config or create it."
+LANG_CONFIG_SNAPSHOT_EXISTS_FMT="Snapshot '%s' exists, but it is to be created in this turn.\nEither use another SNAPSHOT_NAME or remove the snapshot."
+LANG_BACKUP_SET_FMT="Using '%s' as backup set. "
+
+# actions
+LANG_CREATING="Creating:"
+LANG_CREATE_ERROR_FMT="Failed to create '%s'"
+LANG_DESTROYING="Destroying:"
+LANG_DESTROY_ERROR_FMT="Failed to destroy '%s'"
+
+LANG_DECRYPTING="Decrypting:"
+LANG_DECRYPT_ERROR_FMT="Failed to decrypt '%s'"
+LANG_ENCRYPTING="Encrypting:"
+LANG_ENCRYPT_ERROR_FMT="Failed to encrypt '%s'"
+
+LANG_IMPORTING="Importing:"
+LANG_IMPORT_ERROR_FMT="Failed to import '%s'"
+LANG_EXPORTING="Exporting:"
+LANG_EXPORT_ERROR_FMT="Failed to export '%s'"
+
+LANG_REPLICATING="Replicating:"
+LANG_REPLICATE_ERROR_FMT="Failed to replicate '%s' to '%s'"

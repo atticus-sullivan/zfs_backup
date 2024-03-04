@@ -1,6 +1,11 @@
-backupPool="backup"
-backupDsNames=("bak1" "bak2" )
+# vim: ft=sh
 
-poolSnapshot="repl"
+# comments with # are possible
 
-arraySets=("data/daten" "data/home" )
+BACKUP_POOL="backup"
+BACKUP_DS_NAMES=("bak1" "bak2")
+
+SNAPSHOT_NAME="replication"
+
+ARRAY_SET=("data/daten" "data/daten/downloads")
+ARRAY_SET+=("data/daten/additional-sets")

@@ -3,7 +3,7 @@ This is a collection of scripts for the use of making backups on a zfs.
 
 # How to use this
 - Clone this repo or download it somehow
-- Run `backup.bash` and go through the guided setup. Alternatively: Ajust the
+- Run `backup.bash` and go through the guided setup. Alternatively: Adjust the
   `backup.cfg` to suit your setup. Make sure to fullfill the
   prerequisites stated below before running `backups.bash` and create an empty
   file `init` (avoids running the guided init)

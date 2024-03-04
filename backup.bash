@@ -273,7 +273,6 @@ config_user_process()
 	done | sort -u)
 
 	local stat=$(cat ${DIR}/stat.txt)
-	echo "${stat}"
 	if [[ ! ( "${stat}" =~ ^[0-9]+$  && "${stat}" -ge 0 && "${stat}" -lt "${#BACKUP_DS_NAMES[@]}" ) ]]
 	then
 		printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" "${LANG_STAT_FAIL}" >&2
@@ -447,7 +446,7 @@ main_replicate()
 		exit_stack
 		exit -7
 	fi
-	echo
+	# echo
 
 	if ! destroy_dst ; then
 		exit_stack

@@ -39,6 +39,22 @@ In case you're using encypted datasets, these need to be mounted before running
 `backup.bash` script will try to mount it (and you will need to provide the
 passphrase for the decryption).
 
+# Progress
+Just a small snippet of `lua` (using the `date` library) for calculating when
+the replication is finished (or when it should be finished)
+```lua
+function foo(sent)
+    now = date()
+    -- insert the start time/date here (if you do this later, you can check the
+    -- change date of `stat.txt` and/or the timestamp should also be included in
+    -- the console output)
+    start = date(2024, 3, 4, 17, 46, 8)
+    total_s = (now - start):spanseconds() * (379 / sent)
+
+    return start:copy():addseconds(total_s)
+end
+```
+
 # Credits
 A huge thank you to Galatheas for pointing me to zfs and the basic framework of
 the `backup.bash` script originates from him too

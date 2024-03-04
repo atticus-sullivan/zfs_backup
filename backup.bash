@@ -3,6 +3,7 @@
 ###########
 ## TODOs ##
 ###########
+# - [ ] maybe: revise error handling -> like for NC with traps etc
 # nice to have:
 # - [ ] interactive config creation
 # - [ ] init function to create datasets and snapshots the first time (print

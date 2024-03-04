@@ -61,7 +61,7 @@ exit_stack()
 {
 	local ret=0
 	if [[ "${1}" != "normal" ]] ; then
-		printf "${WARN}%b${NC} %b\n" "${LANG_WARNING}" ${LANG_EXIT_WARNING} >&2
+		printf "${WARN}%b${NC} %b\n" "${LANG_WARNING}" "${LANG_EXIT_WARNING}" >&2
 	fi
 
 	# no matter what error, we at least try to cleanup the rest of the stack
@@ -69,8 +69,9 @@ exit_stack()
 	for s in "${EXIT_ENC[@]}" ; do
 		printf "${BLUE}%b${NC} %s:" "${LANG_ENCRYPTING}" "${s}" >&2
 		if zfs unmount "${s}" && zfs unload-key "${s}" ; then
+			:
 		else
-			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_ENCRYPT_ERROR} >&2
+			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" "${LANG_ENCRYPT_ERROR}" >&2
 			ret=-1
 		fi
 	done
@@ -78,8 +79,9 @@ exit_stack()
 	for p in "${EXIT_IMPORT[@]}" ; do
 		printf "${BLUE}%b${NC} %s:" "${LANG_EXPORTING}" "${s}" >&2
 		if zpool export "${s}" ; then
+			:
 		else
-			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" ${LANG_EXPORT_ERROR} >&2
+			printf "${RED}%b${NC} %b\n" "${LANG_ERROR}" "${LANG_EXPORT_ERROR}" >&2
 			ret=-1
 		fi
 	done

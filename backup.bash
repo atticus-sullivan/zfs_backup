@@ -27,7 +27,7 @@
 ##################
 # get the directory of the script in a canonicalized way
 DIR="$(dirname "$(readlink -f "${0}")")"
-INTERACTIVE=false
+INTERACTIVE=true
 
 # COLORS
 GREEN='\033[0;32m' # success

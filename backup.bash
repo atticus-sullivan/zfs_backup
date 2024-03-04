@@ -317,8 +317,8 @@ import()
 decrypt()
 {
 	for p in "${ENCRYPTED_SETS[@]}" ; do
-		printf "${BLUE}%b${NC} %s:" "${LANG_DECRYPTING}" "${p}" >&2
-		if zpool mount -l "${p}" > /dev/null ; then
+		printf "${BLUE}%b${NC} %s: " "${LANG_DECRYPTING}" "${p}" >&2
+		if zfs mount -l "${p}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 			# prepend for a stack like cleanup
 			EXIT_ENC=("${p}" "${EXIT_ENC[@]}")
@@ -342,8 +342,8 @@ destroy_dst()
 {
 	for s in "${ARRAY_SET[@]}"
 	do
-		s="${#*/}" # remove pool from set path
-		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" >&2
+		s="${s#*/}" # remove pool from set path
+		printf "${BLUE}%b${NC} %s: " "${LANG_DESTROYING}" "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${BACKUP_POOL}/${BAK_SET}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
@@ -360,7 +360,7 @@ create_src()
 {
 	for s in "${ARRAY_SET[@]}"
 	do
-		printf "${BLUE}%b${NC} %s:" "${LANG_CREATING}" "${s}" >&2
+		printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${s}" >&2
 		if zfs snapshot "${s}@${SNAPSHOT_NAME}" ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
@@ -379,7 +379,7 @@ replicate()
 	do
 		# echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
 
-		printf "${BLUE}%b${NC} %s -> %s:" "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
+		printf "${BLUE}%b${NC} %s -> %s: " "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
 		if zfs send "${s}@${SNAPSHOT_NAME}" | zfs recv "${BACKUP_POOL}/${BAK_SET}/${s#*/}" -F
 		then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
@@ -398,7 +398,7 @@ destroy_src()
 	#Destroy source Snapshot
 	for s in "${ARRAY_SET[@]}"
 	do
-		printf "${BLUE}%b${NC} %s:" "${LANG_DESTROYING}" "${s}@${SNAPSHOT_NAME}" >&2
+		printf "${BLUE}%b${NC} %s: " "${LANG_DESTROYING}" "${s}@${SNAPSHOT_NAME}" >&2
 		if zfs destroy "${s}@${SNAPSHOT_NAME}" > /dev/null ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else

@@ -3,7 +3,7 @@
 # general purpose stuff
 LANG_CONFIRM="Enter to continue: "
 LANG_ERROR="ERROR:"
-LANG_SUCCESS="SUCCESS:"
+LANG_SUCCESS="SUCCESS"
 LANG_DONE_ERROR_FMT="Done with ERROR  at %s"
 LANG_DONE_SUCC_FMT="SUCCESSfully done at %s"
 LANG_WARNING="WARNING:"

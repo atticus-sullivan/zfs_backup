@@ -213,7 +213,7 @@ config_user_check()
 
 	# check for source datasets
 	for s in "${ARRAY_SET[@]}" ; do
-		if ! zfs list -H "${s}" &> /dev/null ; then
+		if ! check_zfs_avail "${s}" ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_SET_UNAVAILABLE_FMT}\n" "${s}" >&2
 			return 5
@@ -222,14 +222,14 @@ config_user_check()
 
 	# check for dst datasets
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
-		if ! zfs list -H "${BACKUP_POOL}/${b}" &> /dev/null ; then
+		if ! check_zfs_avail "${BACKUP_POOL}/${b}" ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}" >&2
 			return 6
 		fi
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${s#*/}" # remove pool from set path
-			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}" &> /dev/null ; then
+			if ! check_zfs_avail "${BACKUP_POOL}/${b}/${s}" ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}" >&2
 				return 6
@@ -241,7 +241,7 @@ config_user_check()
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
 		for s in "${ARRAY_SET[@]}" ; do
 			s="${s#*/}" # remove pool from set path
-			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" &> /dev/null ; then
+			if ! check_zfs_avail "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" >&2
 				return 7
@@ -250,7 +250,7 @@ config_user_check()
 	done
 
 	for s in "${ARRAY_SET[@]}" ; do
-		if zfs list -H "${s}@${SNAPSHOT_NAME}" &> /dev/null ; then
+		if check_zfs_avail "${s}@${SNAPSHOT_NAME}" ; then
 			printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_CONFIG_SNAPSHOT_EXISTS_FMT}\n" "${s}@${SNAPSHOT_NAME}" >&2
 			return 8
@@ -267,7 +267,7 @@ config_user_check()
 config_user_process()
 {
 	readarray -t IMPORT_POOLS < <(for s in "${ARRAY_SET[@]}" ; do
-		if ! zfs list "${s%%/*}" &>/dev/null ; then
+		if ! check_zfs_avail "${s%%/*}" ; then
 			echo "${s%%/*}"
 		fi
 	done | sort -u)
@@ -346,6 +346,44 @@ decrypt()
 	done
 	[[ "${out_line}" == true ]] && echo
 	return 0
+}
+
+# check a zfs item (ds or snapshot) for existance
+# return 0 if it exists, 1 if it doesn't
+# trailing emptyline: NO (no output)
+check_zfs_avail()
+{
+	if zfs list -H "${1}" &> /dev/null ; then
+		# exists
+		return 0
+	else
+		# missing
+		return 1
+	fi
+}
+
+# TODO
+# trailing emptyline: IF_OUTPUT
+bak_ds_init()
+{
+	local out_line=false
+	for bak in "${BACKUP_DS_NAMES[@]}" ; do
+		for ds in "${ARRAY_SET[@]}" ; do
+			if !check_zfs_avail "${BACKUP_POOL}/${bak}/${ds}" ; then
+				# DS does not exist
+				printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${BACKUP_POOL}/${bak}/${ds}" >&2
+				out_line=true
+				zfs create "${BACKUP_POOL}/${bak}/${ds}"
+			fi
+			if !check_zfs_avail "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}" ; then
+				# snapshot does not exist
+				printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}" >&2
+				out_line=true
+				zfs create "${BACKUP_POOL}/${bak}/${ds}@${SNAPSHOT_NAME}"
+			fi
+		done
+	done
+	[[ "${out_line}" == true ]] && echo
 }
 
 # TODO implement check_space

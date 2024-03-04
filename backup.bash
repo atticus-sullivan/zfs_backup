@@ -222,7 +222,7 @@ config_user_check()
 			return 6
 		fi
 		for s in "${ARRAY_SET[@]}" ; do
-			s="${#*/}" # remove pool from set path
+			s="${s#*/}" # remove pool from set path
 			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}" > /dev/null ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}" >&2
@@ -234,7 +234,7 @@ config_user_check()
 	# check for dst dataset snapshots
 	for b in "${BACKUP_DS_NAMES[@]}" ; do
 		for s in "${ARRAY_SET[@]}" ; do
-			s="${#*/}" # remove pool from set path
+			s="${s#*/}" # remove pool from set path
 			if ! zfs list -H "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" > /dev/null ; then
 				printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 				printf "${LANG_CONFIG_BAKSET_UNAVAILABLE_FMT}\n" "${BACKUP_POOL}/${b}/${s}@${SNAPSHOT_NAME}" >&2

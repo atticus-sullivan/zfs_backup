@@ -175,31 +175,31 @@ config_user_read()
 {
 	# TODO prompt the user to write config file if is interactive
 	# only reads the config from file if file is present
-	if [[ -f ${DIR}/backup.cfg ]]
+	if [[ -f "${DIR}/backup.cfg" ]]
 	then
-		source ${DIR}/backup.cfg
+		source "${DIR}/backup.cfg"
 	fi
 }
 
 # checks if all user config is ok
 config_user_check()
 {
-	if [[ -n "${BACKUP_POOL}" ]] ; then
+	if [[ -z "${BACKUP_POOL}" ]] ; then
 		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_POOL" >&2
 		return 1
 	fi
-	if [[ -n "${BACKUP_DS_NAMES}" ]] ; then
+	if [[ -z "${BACKUP_DS_NAMES}" ]] ; then
 		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 		printf "${LANG_CONFIG_MISSING_FMT}\n" "BACKUP_DS_NAMES" >&2
 		return 2
 	fi
-	if [[ -n "${SNAPSHOT_NAME}" ]] ; then
+	if [[ -z "${SNAPSHOT_NAME}" ]] ; then
 		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 		printf "${LANG_CONFIG_MISSING_FMT}\n" "SNAPSHOT_NAME" >&2
 		return 3
 	fi
-	if [[ -n "${ARRAY_SET}" ]] ; then
+	if [[ -z "${ARRAY_SET}" ]] ; then
 		printf "${RED}%b${NC} " "${LANG_ERROR}" >&2
 		printf "${LANG_CONFIG_MISSING_FMT}\n" "ARRAY_SET" >&2
 		return 4

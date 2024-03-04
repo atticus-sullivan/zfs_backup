@@ -97,6 +97,7 @@ exit_stack()
 # trailing emptyline: NO
 help_fun()
 {
+  # -g                  guide -- interactive guide for generating the config
 	cat >&2 <<EOF
 Usage: $(basename "$0") [-i]
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+shopt -s extglob
+
 ###########
 ## TODOs ##
 ###########
@@ -437,19 +439,68 @@ create_src()
 	return 0
 }
 
+# trailing emptyline: NO
+print_send_verbose()
+{
+	local out_line=false
+	while read line ; do
+		# clear line and go to column 0
+		echo -ne "\033[2K\r"
+		if [[ "$line" == [0-9][0-9]:[0-9][0-9]:[0-9][0-9]+([[:space:]])+([0-9])?(.)*([0-9])[KMGT]+([[:space:]])* ]] ; then
+			# status line given
+			# print line but don't terminate with \n to make overwriting possible
+			echo -n "$line"
+			out_line=true
+		else
+			# some other line given (header, warning or error)
+			# print line with \n to avoid overwriting
+			echo "$line"
+			out_line=false
+		fi
+	done
+	# only print \n for not completely terminated line of "echo -n"
+	[[ "${out_line}" == true ]] && echo
+}
+
+
+# returns the first non-zero exit code contained in PIPESTATUS
+# trailing emptyline: NO (no output)
+check_pipestatus(){
+	if [[ -n "${PIPESTATUS+x}" ]] ; then
+		for e_code in "${PIPESTATUS[@]}" ; do
+			if [[ "$e_code" != 0 ]] ; then
+				break
+			fi
+		done
+		return $e_code
+	fi
+	# PIPESTATUS is always present except if no command was executed until now
+	return 0
+}
+
+# $1 source
+# $2 destination
+send_rcv(){
+	zfs send -v "${1}" | zfs recv "${2}" -F
+	check_pipestatus
+}
+
 # send snapshots to BACKUP_POOL
 # trailing emptyline: IF_OUTPUT
 replicate()
 {
+	# 16:31:36    199M   data/daten/downloads@replication
 	local out_line=false
 	for s in "${ARRAY_SET[@]}"
 	do
 		# echo "runs until BACKUP_POOL is at 'zfs program s.pool xyz.lua + zfs program BACKUP_POOL xyz_.lua'" # TODO
 		out_line=true
-		printf "${BLUE}%b${NC} %s -> %s: " "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2
-		if zfs send "${s}@${SNAPSHOT_NAME}" | zfs recv "${BACKUP_POOL}/${BAK_SET}/${s#*/}" -F
+		printf "${BLUE}%b${NC} %s -> %s (%s)\n" "${LANG_REPLICATING}" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" "$(date "+%Y-%m-%d %T")" >&2
+		( send_rcv "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" ) 3>&1 1>&2- 2>&3- | print_send_verbose
+		check_pipestatus
+		if [[ $? -eq 0 ]]
 		then
-			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
+			printf "\n${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
 			printf "\n${RED}%b${NC} " "${LANG_ERROR}" >&2
 			printf "${LANG_REPLICATE_ERROR_FMT}\n" "${s}@${SNAPSHOT_NAME}" "${BACKUP_POOL}/${BAK_SET}/${s#*/}" >&2

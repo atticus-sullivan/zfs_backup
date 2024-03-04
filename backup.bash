@@ -2,15 +2,6 @@
 
 shopt -s extglob
 
-###########
-## TODOs ##
-###########
-# - [ ] maybe: revise error handling -> like for NC with traps etc
-# nice to have:
-# - [ ] interactive config creation
-# - [ ] check space -> lua
-# - [ ] reminder stuff
-
 #################
 ## CONVENTIONS ##
 #################

@@ -417,6 +417,11 @@ main_replicate()
 		exit_stack
 		exit -2
 	fi
+
+	if ! config_user_process ; then
+		exit_stack
+		exit -5
+	fi
 	echo
 
 	if ! import ; then
@@ -429,12 +434,6 @@ main_replicate()
 		exit_stack
 		exit -4
 	fi
-	echo
-	if ! config_user_process ; then
-		exit_stack
-		exit -5
-	fi
-	echo
 
 	if ! decrypt ; then
 		exit_stack

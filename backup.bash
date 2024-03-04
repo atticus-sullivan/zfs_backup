@@ -422,7 +422,7 @@ create_src()
 	for s in "${ARRAY_SET[@]}"
 	do
 		out_line=true
-		printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${s}" >&2
+		printf "${BLUE}%b${NC} %s: " "${LANG_CREATING}" "${s}@${SNAPSHOT_NAME}" >&2
 		if zfs snapshot "${s}@${SNAPSHOT_NAME}" ; then
 			printf "${GREEN}%b${NC}\n" "${LANG_SUCCESS}" >&2
 		else
